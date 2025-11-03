@@ -1,0 +1,67 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>qml;cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>qrc;rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Form Files">
+      <UniqueIdentifier>{99349809-55BA-4b9d-BF79-8FDBB0286EB3}</UniqueIdentifier>
+      <Extensions>ui</Extensions>
+    </Filter>
+    <Filter Include="Translation Files">
+      <UniqueIdentifier>{639EADAA-A684-42e4-A9AD-28FC9BCB8F7C}</UniqueIdentifier>
+      <Extensions>ts</Extensions>
+    </Filter>
+    <Filter Include="Source Files\Data">
+      <UniqueIdentifier>{3de0b2c0-5a83-4d20-97b9-615cfd3bf684}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Qt">
+      <UniqueIdentifier>{303990a9-0f06-45c2-a39e-cca02375b1ff}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Data">
+      <UniqueIdentifier>{b94b0125-496e-412c-af26-0db6c3a3eb2a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Qt">
+      <UniqueIdentifier>{5175c429-4cfb-43db-a9b6-d2f10bd44f46}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <QtRcc Include="MainWindow.qrc">
+      <Filter>Resource Files</Filter>
+    </QtRcc>
+    <QtUic Include="MainWindow.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtMoc Include="MainWindow.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <ClCompile Include="MainWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DeviceManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="DeviceManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DeviceDetails.h">
+      <Filter>Header Files\Data</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
