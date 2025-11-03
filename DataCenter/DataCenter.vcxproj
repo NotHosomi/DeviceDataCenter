@@ -63,6 +63,11 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
   </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="Configuration">
     <ClCompile>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -95,13 +100,28 @@
     <QtRcc Include="MainWindow.qrc" />
     <QtUic Include="MainWindow.ui" />
     <QtMoc Include="MainWindow.h" />
-    <ClCompile Include="DeviceManager.cpp" />
+    <ClCompile Include="Config.cpp" />
+    <ClCompile Include="CsvParsing.cpp" />
+    <ClCompile Include="DataEIS.cpp" />
+    <ClCompile Include="Design.cpp" />
+    <ClCompile Include="Device.cpp" />
+    <ClCompile Include="DataManager.cpp" />
     <ClCompile Include="MainWindow.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Config.h" />
+    <ClInclude Include="CsvParsing.h" />
+    <ClInclude Include="DataCV.h" />
+    <ClInclude Include="DataEIS.h" />
+    <ClInclude Include="Design.h" />
+    <ClInclude Include="Device.h" />
     <ClInclude Include="DeviceDetails.h" />
-    <ClInclude Include="DeviceManager.h" />
+    <ClInclude Include="DataManager.h" />
+    <ClInclude Include="Stats.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="DataCenter.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">
