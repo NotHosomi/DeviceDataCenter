@@ -1,5 +1,6 @@
 #include "Grapher.h"
 #include <matplot/matplot.h>
+#include <algorithm>
 
 Grapher::Grapher(std::filesystem::path outputDir) :
 	m_PlotDir(outputDir)
@@ -7,23 +8,21 @@ Grapher::Grapher(std::filesystem::path outputDir) :
 
 }
 
-void Grapher::GraphEIS(std::string sId, T_ErrorBarF tZ, T_ErrorBarF tPhase)
+void Grapher::GraphEIS(std::string sId, T_ErrorBarD tZ, T_ErrorBarD tPhase)
 {
-	matplot::figure_handle fig = matplot::figure();
-	matplot::axes_handle magnitudePlot = fig->add_axes();
-	matplot::axes_handle phasePlot = fig->add_axes();
+	matplot::error_bar_handle magnitudePlot = matplot::errorbar(tZ.x, tZ.y, tZ.err);
+	matplot::gca()->x_axis().scale(matplot::axis_type::axis_scale::log);
+	matplot::gca()->y_axis().scale(matplot::axis_type::axis_scale::log);
 
-	magnitudePlot->errorbar(tZ.x, tZ.y, tZ.err);
-	phasePlot->errorbar(tPhase.x, tPhase.y, tPhase.err);
-
-	// not sure abt this block. Do they both need it? I think cuz they have the same X vals it should be fine
-	magnitudePlot->x_axis().scale(matplot::axis_type::axis_scale::log);
-	phasePlot->x_axis().scale(matplot::axis_type::axis_scale::log);
-
-	magnitudePlot->y_axis().scale(matplot::axis_type::axis_scale::log);
-	phasePlot->ylim({ -90, 0 });
-
-	matplot::save(m_PlotDir.string() + "/" + sId + "/EIS.png");
+	matplot::hold(true);
+	matplot::error_bar_handle phasePlot = matplot::errorbar(tPhase.x, tPhase.y, tPhase.err);
+	phasePlot->use_y2(true);
+	phasePlot->y_positive_delta(tPhase.err);
+	matplot::y2lim({ 0,90 });
+	
+	std::string path = m_PlotDir.string() + "/" + sId + "/Plots/";
+	std::filesystem::create_directories(path);
+	matplot::save(path + "EIS.png");
 }
 
 void Grapher::GraphCV(std::string path, std::string Id)

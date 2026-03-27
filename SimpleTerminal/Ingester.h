@@ -8,7 +8,7 @@ class Ingester
 public:
 	Ingester(std::filesystem::path deviceDirectory);
 
-	std::array<T_ErrorBarF, 2> ReadEISFiles();
+	std::array<T_ErrorBarD, 2> ReadEISFiles();
 
 private:
 	std::vector<std::filesystem::path> m_vEisPaths;

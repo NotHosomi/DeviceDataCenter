@@ -47,7 +47,7 @@ Ingester::Ingester(std::filesystem::path deviceDirectory)
 	}
 }
 
-std::array<T_ErrorBarF, 2> Ingester::ReadEISFiles()
+std::array<T_ErrorBarD, 2> Ingester::ReadEISFiles()
 {
 	std::vector<CsvFile> csvList;
 	for (auto& path : m_vEisPaths)
@@ -59,8 +59,8 @@ std::array<T_ErrorBarF, 2> Ingester::ReadEISFiles()
 		}
 	}
 
-	T_ErrorBarF PointsZ;
-	T_ErrorBarF PointsPhase;
+	T_ErrorBarD PointsZ;
+	T_ErrorBarD PointsPhase;
 	for (const auto& cell : csvList[0].GetCol("Frequency (Hz)"))
 	{
 		PointsZ.x.push_back(std::stof(cell));

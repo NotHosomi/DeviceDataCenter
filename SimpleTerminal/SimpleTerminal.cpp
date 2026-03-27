@@ -25,6 +25,7 @@ int main()
 
 	std::string deviceId = "";
 	std::string devicePath = "";
+	Grapher grapher(dataPath);
 	for(;;)
 	{
 		std::cout << "Input device ID: ";
@@ -38,9 +39,8 @@ int main()
 
 		std::cout << "Files found..." << std::endl;
 		Ingester ingest(devicePath);
-		std::array<T_ErrorBarF, 2> EisData = ingest.ReadEISFiles();
+		std::array<T_ErrorBarD, 2> EisData = ingest.ReadEISFiles();
 
-		Grapher grapher(devicePath + "/Plots");
 		grapher.GraphEIS(deviceId, EisData[0], EisData[1]);
 	}
 }

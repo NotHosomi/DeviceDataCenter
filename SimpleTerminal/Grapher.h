@@ -8,7 +8,7 @@ class Grapher
 public:
 	Grapher(std::filesystem::path outputDir);
 
-	void GraphEIS(std::string sId, T_ErrorBarF tZ, T_ErrorBarF tPhase);
+	void GraphEIS(std::string sId, T_ErrorBarD tZ, T_ErrorBarD tPhase);
 	void GraphCV(std::string path, std::string Id);
 	void GraphCIL(std::string path, std::string Id);
 

@@ -10,3 +10,4 @@ struct T_ErrorBar
 };
 
 using T_ErrorBarF = T_ErrorBar<float, float, float>;
+using T_ErrorBarD = T_ErrorBar<double, double, double>;
