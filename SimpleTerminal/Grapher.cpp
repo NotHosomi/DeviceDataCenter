@@ -12,29 +12,51 @@ Grapher::Grapher(std::filesystem::path outputDir) :
 void Grapher::GraphEIS(std::string sId, T_ErrorBarD tZ, T_ErrorBarD tPhase)
 {
 	using namespace matplot;
-	error_bar_handle magnitudePlot = matplot::errorbar(tZ.x, tZ.y, tZ.err);
-	gca()->x_axis().scale(matplot::axis_type::axis_scale::log);
-	gca()->y_axis().scale(matplot::axis_type::axis_scale::log);
+	auto fig = figure(true);
+	hold(false);
+	error_bar_handle magnitudePlot = errorbar(tZ.x, tZ.y, tZ.err);
+	gca()->x_axis().scale(axis_type::axis_scale::log);
+	gca()->y_axis().scale(axis_type::axis_scale::log);
+	double yMin = std::min(  1000.0, gca()->ylim()[0] * 0.9);
+	double yMax = std::max(100000.0, gca()->ylim()[1] * 1.1);
+	gca()->ylim({ yMin, yMax });
 
-	double y1Min = std::min(1000.0, gca()->ylim()[0] * 0.9);
-	double y1Max = std::max(100000.0, gca()->ylim()[1] * 1.1);
-	 
-	// generate the scaled error bar, because use_y2 breaks the errorbars if the new scale doesn't match y1
-	double scalefactor = (y1Max - y1Min) / 90.0;
-	std::vector<double> scaledY;
-	std::vector<double> scaledErr;
+	double logMin = std::log10(yMin);
+	double logMax = std::log10(yMax);
+	double logScaleFactor = (logMax - logMin) / 90.0;
+	std::vector<double> scaledPhase, errNeg, errPos, errX;
 	for (int i = 0; i < tPhase.y.size(); ++i)
 	{
-		scaledY.push_back((tPhase.y[i]) * scalefactor + y1Min);
-		scaledErr.push_back(tPhase.err[i] * scalefactor);
+		double logCenter = (tPhase.y[i] + 90) * logScaleFactor + logMin;
+		double logUpper = (tPhase.y[i] + tPhase.err[i] + 90) * logScaleFactor + logMin;
+		double logLower = (tPhase.y[i] - tPhase.err[i] + 90) * logScaleFactor + logMin;
+
+		double center = std::pow(10, logCenter);
+		scaledPhase.push_back(center);
+		errPos.push_back(std::pow(10, logUpper) - center);
+		errNeg.push_back(center - std::pow(10, logLower));
+		errX.push_back(0);
 	}
 
+	gca()->y2lim({ yMin, yMax });
 	hold(true);
-	//error_bar_handle phasePlot = errorbar(tPhase.x, tPhase.y, tPhase.y);
-	error_bar_handle phasePlot = errorbar(tPhase.x, scaledY, scaledErr);
+	//error_bar_handle phasePlot = errorbar(tPhase.x, tPhase.y, tPhase.err);
 	//phasePlot->use_y2(true);
-	//y2lim({ 0,90 });
-	
+	error_bar_handle phasePlot = errorbar(tPhase.x, scaledPhase, errNeg, errPos, errX, errX);
+	//gca()->y2lim({ 0, gca()->y2lim()[1] });
+
+	// create the y2 axis
+	auto dummy = plot({0,0}, {1,0});
+	dummy->use_y2(true);
+	y2lim({ -90,0 });
+
+	// captioning
+	title(sId + " EIS");
+	y2label("Phase (\xC2\xB0)");
+	ylabel("Absolute Impedance (\xCE\xA9)");
+	xlabel("Frequency (Hz)");
+
+
 	std::string path = m_PlotDir.string() + "/" + sId + "/Plots/";
 	std::filesystem::create_directories(path);
 	save(path + "EIS.png");

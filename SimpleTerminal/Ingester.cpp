@@ -70,13 +70,13 @@ std::array<T_ErrorBarD, 2> Ingester::ReadEISFiles()
 	for (int rowindex = 0; rowindex < csvList[0].GetCol(0).size(); ++rowindex)
 	{
 		float avrgZY = 0;
-		std::vector<float> rowZVals;
-		std::vector<float> rowPhaseVals;
+		std::vector<double> rowZVals;
+		std::vector<double> rowPhaseVals;
 		float avrgPhaseY = 0;
 		for (int fileindex = 0; fileindex < csvList.size(); ++fileindex)
 		{
 			rowZVals.push_back(std::stof(csvList[fileindex].GetCol("Z (\xCE\xA9)")[rowindex]));
-			rowPhaseVals.push_back(std::stof(csvList[fileindex].GetCol("-Phase (\xC2\xB0)")[rowindex]));
+			rowPhaseVals.push_back(-std::stof(csvList[fileindex].GetCol("-Phase (\xC2\xB0)")[rowindex]));
 		}
 		T_Stats rowZStats = stddev(rowZVals);
 		PointsZ.y.push_back(rowZStats.mean);
