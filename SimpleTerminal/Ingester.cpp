@@ -1,13 +1,16 @@
 ﻿#include "Ingester.h"
 #include <filesystem>
 #include <iostream>
+#include <fstream>
 #include <assert.h>
+#include <map>
 #include "TerminalColours.h"
 #include "CsvFile.h"
 #include "stddev.h"
 
 Ingester::Ingester(std::filesystem::path deviceDirectory)
 {
+	std::cout << "Files found..." << std::endl;
 	std::string path;
 	std::string colcmd;
 	std::string printPath;
@@ -45,12 +48,28 @@ Ingester::Ingester(std::filesystem::path deviceDirectory)
 		}
 		std::cout << TERM_RESET;
 	}
+
+
+	if (!std::filesystem::exists(deviceDirectory / "Details.txt"))
+	{
+		std::cout << "Device details not found." << std::endl;
+		std::cout << "Electrode diameter (\xC2\xB5m): ";
+		float diameter;
+		while (!(std::cin >> diameter))
+		{
+			std::cin.clear();
+			std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+		}
+		std::ofstream file("details.txt");
+		file << "diameter:" << diameter << std::endl;
+		file.close();
+	}
 }
 
-std::array<T_ErrorBarD, 2> Ingester::ReadEISFiles()
+std::vector<CsvFile> Ingester::readFiles(const std::vector<std::filesystem::path>& fileaddrs)
 {
 	std::vector<CsvFile> csvList;
-	for (auto& path : m_vEisPaths)
+	for (auto& path : fileaddrs)
 	{
 		csvList.emplace_back(path.string(), ';');
 		if (csvList.back().GetHeadings().size() == 1) // in case it has a different delimiter
@@ -58,13 +77,44 @@ std::array<T_ErrorBarD, 2> Ingester::ReadEISFiles()
 			csvList.back() = CsvFile(path.string(), ',');
 		}
 	}
+	return csvList;
+}
+
+double Ingester::hysteresisArea(const std::vector<double>& x, const std::vector<double>& y)
+{
+	double area = 0.0;
+	int n = x.size();
+	int j;
+	for (int i = 0; i < n; ++i)
+	{
+		j = (i + 1) % n;
+		area += x[i] * y[j] - x[j] * y[i];
+	}
+	return std::abs(area) / 2.0;
+}
+
+std::array<T_ErrorBarD, 2> Ingester::GetEisPlot()
+{
+	std::vector<CsvFile> csvList = readFiles(m_vEisPaths);
+
+	std::erase_if(csvList, [](const CsvFile& data) {
+		for (int i = 0; i < data.GetCol(0).size(); ++i)
+		{
+			if (data.GetCol("Frequency (Hz)")[i] == "1000")
+			{
+				return std::atof(data.GetCol("Z (\xCE\xA9)")[i].c_str()) >= 20000;
+			}
+		}
+		return true;
+		});
+	if (csvList.size() == 0) { return { T_ErrorBarD(), T_ErrorBarD() }; }
 
 	T_ErrorBarD PointsZ;
 	T_ErrorBarD PointsPhase;
-	for (const auto& cell : csvList[0].GetCol("Frequency (Hz)"))
+	for (const auto& freq : csvList[0].GetCol("Frequency (Hz)"))
 	{
-		PointsZ.x.push_back(std::stof(cell));
-		PointsPhase.x.push_back(-std::stof(cell));
+		PointsZ.x.push_back(std::stof(freq));
+		PointsPhase.x.push_back(-std::stof(freq));
 	}
 
 	for (int rowindex = 0; rowindex < csvList[0].GetCol(0).size(); ++rowindex)
@@ -86,4 +136,70 @@ std::array<T_ErrorBarD, 2> Ingester::ReadEISFiles()
 		PointsPhase.err.push_back(rowPhaseStats.stddev);
 	}
 	return { PointsZ, PointsPhase };
+}
+
+std::map<std::string, std::pair<double,double>> Ingester::GetEisKeyvals()
+{
+	std::map<std::string, std::pair<double, double>> out;
+	std::vector<CsvFile> csvList = readFiles(m_vEisPaths);
+	for (const auto& entry : csvList)
+	{
+		std::pair<double, double> keyvals{ 0.0, 0.0 };
+		int index = 0;
+		for (; index < entry.GetCol(0).size(); ++index)
+		{
+			if (entry.GetCol("Frequency (Hz)")[index] == "1000")
+			{
+				keyvals.first = std::atof(entry.GetCol("Z (\xCE\xA9)")[index].c_str());
+			}
+			else if (entry.GetCol("Frequency (Hz)")[index] == "100")
+			{
+				keyvals.second = std::atof(entry.GetCol("Z (\xCE\xA9)")[index].c_str());
+			}
+		}
+		out.insert({ entry.GetFilename(), keyvals });
+
+	}
+	return ();
+}
+
+std::map<std::string, double> Ingester::CalculateCscVals()
+{
+	std::map<std::string, double> mCscVals;
+	std::vector<CsvFile> csvList = readFiles(m_vCvPaths);
+
+	for(auto entry : csvList)
+	{
+		std::vector<std::string> scanStrs = entry.GetCol("Scan");
+		std::vector<std::string> voltageStrs = entry.GetCol("WE(1).Potential (V)");
+		std::vector<std::string> currentStrs = entry.GetCol("WE(1).Current (A)");
+
+		std::vector<int> vLoopOffsets;
+		std::vector<std::vector<double>> currents;
+		std::vector<std::vector<double>> voltages;
+		vLoopOffsets.push_back(0);
+		currents.emplace_back();
+		voltages.emplace_back();
+		for (int i = 0; i < entry.GetCol(0).size(); ++i)
+		{
+			int loop = std::atoi(scanStrs[i].c_str());
+			if (loop != vLoopOffsets.size())
+			{
+				vLoopOffsets.push_back(loop);
+				currents.emplace_back();
+				voltages.emplace_back();
+			}
+			currents[loop - 1].push_back(std::atof(currentStrs[i].c_str()));
+			voltages[loop - 1].push_back(std::atof(currentStrs[i].c_str()));
+		}
+
+		double csc = 0;
+		for (int i = 1; i < voltages.size(); ++i)
+		{
+			csc += hysteresisArea(voltages[i], currents[i]);
+		}
+		csc /= voltages.size();
+		mCscVals.insert({ entry.GetFilename(), csc });
+	}
+	return mCscVals;
 }

@@ -3,14 +3,16 @@
 #include <fstream>
 #include <string>
 #include <sstream>
+#include <filesystem>
 
-CsvFile::CsvFile(std::string sFilePath, char cDelimiter, char sRowDelimiter)
+CsvFile::CsvFile(const std::string& sFilePath, char cDelimiter, char sRowDelimiter)
 {
     std::ifstream file(sFilePath);
     if (!file.is_open())
     {
         return;
     }
+    m_sFilename = std::filesystem::path(sFilePath).filename().string();
     std::string line;
     std::string cell;
 
@@ -35,12 +37,12 @@ CsvFile::CsvFile(std::string sFilePath, char cDelimiter, char sRowDelimiter)
     file.close();
 }
 
-std::vector<std::string> CsvFile::GetHeadings()
+std::vector<std::string> CsvFile::GetHeadings() const
 {
     return m_vHeadings;
 }
 
-std::vector<std::string> CsvFile::GetRow(unsigned int index)
+std::vector<std::string> CsvFile::GetRow(unsigned int index) const
 {
     std::vector<std::string> row;
     if (index > m_vColumns[0].size())
@@ -54,12 +56,12 @@ std::vector<std::string> CsvFile::GetRow(unsigned int index)
     return row;
 }
 
-const std::vector<std::string>& CsvFile::GetCol(unsigned int index)
+const std::vector<std::string>& CsvFile::GetCol(unsigned int index) const
 {
     return m_vColumns[index];
 }
 
-const std::vector<std::string>& CsvFile::GetCol(std::string header)
+const std::vector<std::string>& CsvFile::GetCol(std::string header) const
 {
     for (int i = 0; i < m_vHeadings.size(); ++i)
     {
@@ -70,4 +72,9 @@ const std::vector<std::string>& CsvFile::GetCol(std::string header)
     }
     throw std::invalid_argument("Header \"" + header + "\" does not exist in CSV");
     
+}
+
+const std::string& CsvFile::GetFilename() const
+{
+    return m_sFilename;
 }

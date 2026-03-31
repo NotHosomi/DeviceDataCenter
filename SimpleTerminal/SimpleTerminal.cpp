@@ -4,6 +4,7 @@
 #include <iostream>
 #include <filesystem>
 #include <array>
+#include <fstream>
 #include "TerminalColours.h"
 #include "Ingester.h"
 #include "ErrorBarData.h"
@@ -37,9 +38,19 @@ int main()
 			continue;
 		}
 
-		std::cout << "Files found..." << std::endl;
 		Ingester ingest(devicePath);
-		std::array<T_ErrorBarD, 2> EisData = ingest.ReadEISFiles();
+		std::map<std::string, std::pair<double,double>> ImpedanceKeyvals = ingest.GetEisKeyvals();
+		std::array<T_ErrorBarD, 2> EisData = ingest.GetEisPlot();
+		std::map<std::string, double> CscVals = ingest.CalculateCscVals();
+		std::cout << "CSC:" << std::endl;
+		double sum = 0.0;
+		for (const auto& iter : CscVals)
+		{
+			std::cout << "  " << iter.first << ": " << iter.second << std::endl;
+			sum += iter.second;
+		}
+		std::cout << "  Average: "
+
 
 		grapher.GraphEIS(deviceId, EisData[0], EisData[1]);
 	}
