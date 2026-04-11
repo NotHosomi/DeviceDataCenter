@@ -234,6 +234,43 @@ std::map<std::string, double> Ingester::CalculateCscVals()
 	return mCscVals;
 }
 
+T_CilData Ingester::CalculateCilVals()
+{
+	if (m_vCilPaths.size() == 0)
+	{
+		std::cout << "No voltage transients data found" << std::endl;
+		return {};
+	}
+	std::cout << "Reading voltage transients..." << std::endl;
+	T_CilData output;
+	if (m_vCilPaths.size() > 1)
+	{
+		std::cout << "Multiple voltage transient files found. Using " + m_vCilPaths[0].filename().string() << std::endl;
+	}
+	CsvFile csv(m_vCilPaths[0].string());
+	for (int i = 1; i < csv.GetHeadings().size(); ++i)
+	{
+		output.vPulseWidths.push_back(std::atoi(csv.GetHeadings()[i].c_str()));
+	}
+
+	for (int row = 0; row < csv.GetCol(0).size(); ++row)
+	{
+		int elecNum = std::atoi(csv.GetCol(0)[row].c_str());
+		output.mCilVals.insert({ elecNum, {} });
+		for (int col = 0; col < csv.GetHeadings().size() - 1; ++col)
+		{												
+			double charge =
+				std::atof(csv.GetCol(col + 1)[row].c_str()) * 1e6 // scale to amps
+				* output.vPulseWidths[col] * 1e6 // scale to seconds
+				* 1e6; // scale to milliCoulombs
+			double cil = charge / GetElectrodeArea_cm2();
+			output.mCilVals.at(elecNum).push_back(cil);
+		}
+	}
+
+	return output;
+}
+
 float Ingester::GetElectrodeDiameter()
 {
 	return m_fElectrodeDiameter;

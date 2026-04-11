@@ -11,6 +11,7 @@
 #include "Grapher.h"
 #include "PrintTable.h"
 
+std::string RoundToStr(double num) { return std::to_string(static_cast<int>(num + 0.5)); }
 
 int main()
 {
@@ -58,7 +59,7 @@ int main()
 				validCount += 1;
 				colour = TERM_GREEN;
 			}
-			EisTable.AddRow({iter.first, std::to_string(iter.second[0]), std::to_string(iter.second[1]), std::to_string(iter.second[2]) }, colour);
+			EisTable.AddRow({iter.first, RoundToStr(iter.second[0]), RoundToStr(iter.second[1]), RoundToStr(iter.second[2]) }, colour);
 		}
 		EisTable.Print(TERM_YELLOW);
 		std::cout << "Average: " << (sum / validCount) << std::endl;
@@ -81,6 +82,20 @@ int main()
 		std::cout << "  Average: " << (sum / CscVals.size()) << std::endl;
 
 		// CIL
-		ingest.GetVoltageTransients()
+		T_CilData cils = ingest.CalculateCilVals();
+		std::vector<std::string> cilTableHeaders{ "Electrode #" };
+		for (const auto& pulseWidth : cils.vPulseWidths) { cilTableHeaders.push_back(std::to_string(pulseWidth) + "us"); };
+		PrintTable cilTable(cilTableHeaders);
+		for (const auto& row : cils.mCilVals)
+		{
+			std::vector<std::string> rowtext{ std::to_string(row.first)};
+			for (const auto& val : row.second) { rowtext.push_back(std::to_string(val)); };
+			cilTable.AddRow(rowtext);
+		}
+		cilTable.Print();
+
+
+		// Plot CIL values
+		//todo
 	}
 }

@@ -6,6 +6,12 @@
 #include "ErrorBarData.h"
 #include "CsvFile.h"
 
+struct T_CilData
+{
+	std::vector<int> vPulseWidths;
+	std::map<int, std::vector<float>> mCilVals;
+};
+
 class Ingester
 {
 public:
@@ -14,6 +20,7 @@ public:
 	std::array<T_ErrorBarD, 2> GetEisPlot();
 	std::map<std::string, std::array<double, 3>> GetEisKeyvals();
 	std::map<std::string, double> CalculateCscVals();
+	T_CilData CalculateCilVals();
 
 	float GetElectrodeDiameter();
 	double GetElectrodeArea_cm2();
