@@ -133,6 +133,7 @@
     <ClCompile Include="ErrorBarData.cpp" />
     <ClCompile Include="Grapher.cpp" />
     <ClCompile Include="Ingester.cpp" />
+    <ClCompile Include="PrintTable.cpp" />
     <ClCompile Include="SimpleTerminal.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -140,6 +141,7 @@
     <ClInclude Include="ErrorBarData.h" />
     <ClInclude Include="Grapher.h" />
     <ClInclude Include="Ingester.h" />
+    <ClInclude Include="PrintTable.h" />
     <ClInclude Include="stddev.h" />
     <ClInclude Include="Symbols.h" />
     <ClInclude Include="TerminalColours.h" />
