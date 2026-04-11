@@ -75,7 +75,6 @@ int main()
 		for (const auto& iter : CscVals)
 		{
 			CscTable.AddRow({ iter.first, std::to_string(iter.second) });
-			std::cout << "  " << iter.first << ": " << iter.second << std::endl;
 			sum += iter.second;
 		}
 		CscTable.Print(TERM_YELLOW);
