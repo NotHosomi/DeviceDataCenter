@@ -11,6 +11,7 @@ Grapher::Grapher(std::filesystem::path outputDir) :
 
 void Grapher::GraphEIS(std::string sId, T_ErrorBarD tZ, T_ErrorBarD tPhase)
 {
+	std::cout << "Rendering EIS plot... " << std::flush;
 	using namespace matplot;
 	auto fig = figure(true);
 	hold(false);
@@ -60,6 +61,7 @@ void Grapher::GraphEIS(std::string sId, T_ErrorBarD tZ, T_ErrorBarD tPhase)
 	std::string path = m_PlotDir.string() + "/" + sId + "/Plots/";
 	std::filesystem::create_directories(path);
 	save(path + "EIS.png");
+	std::cout << "Done\n" << std::endl;
 }
 
 void Grapher::GraphCV(std::string path, std::string Id)

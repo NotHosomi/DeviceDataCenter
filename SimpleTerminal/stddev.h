@@ -15,7 +15,7 @@ T_Stats stddev(const std::vector<T>& arr)
     stats.sum = 0;
     stats.stddev = 0;
 
-    int size = arr.size();
+    int size = static_cast<int>(arr.size());
 
     // Calculate the sum of elements in the vector
     for (int i = 0; i < size; ++i) {
