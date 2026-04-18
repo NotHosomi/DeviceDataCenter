@@ -175,7 +175,7 @@ std::map<std::string, T_CvData> Ingester::CalculateCscVals()
 		}
 		area /= tOutput.vLoops.size();
 
-		// todo: convert area to CSC
+		// convert area to CSC
 		int t1index = ((vLoopOffsets[2] - vLoopOffsets[1]) / 2) + vLoopOffsets[1];
 		int t0index = vLoopOffsets[1];
 		double timeDelta = std::atof(entry.GetCol("Time (s)")[t1index].c_str())
