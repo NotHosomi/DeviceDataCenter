@@ -4,6 +4,7 @@
 #include <fstream>
 #include <assert.h>
 #include <map>
+#include <algorithm>
 #include "TerminalColours.h"
 #include "CsvFile.h"
 #include "stddev.h"
@@ -82,7 +83,7 @@ Ingester::Ingester(std::filesystem::path deviceDirectory)
 	}
 }
 
-std::vector<CsvFile> Ingester::readFiles(const std::vector<std::filesystem::path>& fileaddrs)
+std::vector<CsvFile> Ingester::readFiles(const std::vector<std::filesystem::path>& fileaddrs) const
 {
 	std::vector<CsvFile> csvList;
 	for (auto& path : fileaddrs)
@@ -96,7 +97,7 @@ std::vector<CsvFile> Ingester::readFiles(const std::vector<std::filesystem::path
 	return csvList;
 }
 
-T_CvData Ingester::parseCvFile(const CsvFile& csv)
+T_CvData Ingester::parseCvFile(const CsvFile& csv) const
 {
 	T_CvData tOutput;
 	std::vector<std::string> scanStrs = csv.GetCol("Scan");
@@ -118,7 +119,7 @@ T_CvData Ingester::parseCvFile(const CsvFile& csv)
 	return tOutput;
 }
 
-double Ingester::hysteresisArea(const std::vector<double>& x, const std::vector<double>& y)
+double Ingester::hysteresisArea(const std::vector<double>& x, const std::vector<double>& y) const
 {
 	double area = 0.0;
 	int n = static_cast<int>(x.size());
@@ -131,7 +132,7 @@ double Ingester::hysteresisArea(const std::vector<double>& x, const std::vector<
 	return std::abs(area) / 2.0;
 }
 
-std::map<std::string, std::array<double, 3>> Ingester::GetEisKeyvals()
+std::map<std::string, std::array<double, 3>> Ingester::GetEisKeyvals() const
 {
 	std::map<std::string, std::array<double, 3>> out;
 	std::vector<CsvFile> csvList = readFiles(m_vEisPaths);
@@ -160,7 +161,7 @@ std::map<std::string, std::array<double, 3>> Ingester::GetEisKeyvals()
 }
 
 // todo: fix csc nan
-std::map<std::string, T_CvData> Ingester::CalculateCscVals()
+std::map<std::string, T_CvData> Ingester::CalculateCscVals() const
 {
 	std::map<std::string, T_CvData> mOutput;
 	std::cout << "Reading CV..." << std::endl;
@@ -204,7 +205,7 @@ std::map<std::string, T_CvData> Ingester::CalculateCscVals()
 	return mOutput;
 }
 
-T_CilData Ingester::CalculateCilVals()
+T_CilData Ingester::CalculateCilVals() const
 {
 	if (m_vCilPaths.size() == 0)
 	{
@@ -241,7 +242,7 @@ T_CilData Ingester::CalculateCilVals()
 	return output;
 }
 
-std::array<T_ErrorBarD, 2> Ingester::GetEisPlot()
+std::array<T_ErrorBarD, 2> Ingester::GetEisPlot() const
 {
 	std::cout << "Generating EIS plot..." << std::flush;
 	std::vector<CsvFile> csvList = readFiles(m_vEisPaths);
@@ -288,42 +289,84 @@ std::array<T_ErrorBarD, 2> Ingester::GetEisPlot()
 	return { PointsZ, PointsPhase };
 }
 
-T_ErrorBarD Ingester::GetCvPlot()
+enum E_ScanDir
+{
+	Forward,
+	Reverse
+};
+struct T_Voltage
+{
+	double dVal;
+	E_ScanDir eDir;
+	bool operator<(const T_Voltage& other) const
+	{
+		if (static_cast<int>(eDir) == static_cast<int>(other.eDir))
+		{
+			return dVal < other.dVal;
+		}
+		return static_cast<int>(eDir) < static_cast<int>(other.eDir);
+	}
+};
+T_ErrorBarD Ingester::GetCvPlot(const std::vector<std::string>& vExcludes) const
 {
 	std::cout << "Building CV plot... " << std::flush;
-	std::vector<T_CvData> grossCv;
+	std::vector<std::map<T_Voltage, double>> grossCv;
 	for (const auto& csv : readFiles(m_vCvPaths))
 	{
+		if (std::find(vExcludes.begin(), vExcludes.end(), csv.GetFilename()) == vExcludes.end())
+		{
+			continue;
+		}
 		T_CvData tData = parseCvFile(csv);
 		// average per loop
-		std::map<double, double>& loopAvrg = grossCv.emplace_back();	// todo: this doesn't work, cuz it looses the ORDER
+		std::map<T_Voltage, double>& loopAvrg = grossCv.emplace_back();	// todo: this doesn't work, cuz it looses the ORDER
 		for (int i = 1; i < tData.vLoops.size(); ++i)
 		{
 			const T_CvLoop& loop = tData.vLoops[i];
 			for (int j = 0; j < loop.vVoltages.size(); ++j)
 			{
-				if (!loopAvrg.contains(loop.vVoltages[j]))
+				T_Voltage key;
+				// round to 0.0X volts
+				double roundedVal = std::round(loop.vVoltages[j] * 100) / 100;
+				key.dVal = roundedVal;
+				if (j == 0)
 				{
-					loopAvrg.insert({ loop.vVoltages[j], loop.vCurrents[j] / tData.vLoops.size() });
+					key.eDir = E_ScanDir::Forward;
 				}
 				else
 				{
-					loopAvrg.at(loop.vVoltages[j]) += loop.vCurrents[j] / tData.vLoops.size();
+					key.eDir = loop.vVoltages[j] > loop.vVoltages[j - 1] ? E_ScanDir::Forward : E_ScanDir::Reverse;
+				}
+				if (!loopAvrg.contains(key))
+				{
+					loopAvrg.insert({ key, loop.vCurrents[j] / tData.vLoops.size() });
+				}
+				else
+				{
+					loopAvrg.at(key) += loop.vCurrents[j] / tData.vLoops.size();
 				}
 			}
 		}
 	}
 	// average across files, with stddev
-	std::map<double, T_Stats> stats = stddev(grossCv);
+	std::map<T_Voltage, T_Stats> stats = stddev(grossCv);
 
 
 	T_ErrorBarD output;
-	for (const auto& iter : stats)
+	for (const auto& eDir : { E_ScanDir::Forward, E_ScanDir::Reverse})
 	{
-		output.x.push_back(iter.first);
-		output.y.push_back(iter.second.mean);
-		output.err.push_back(iter.second.stddev);
+		for (const auto& iter : stats)
+		{
+			if (iter.first.eDir != eDir) { continue; }
+			output.x.push_back(iter.first.dVal);
+			output.y.push_back(iter.second.mean);
+			output.err.push_back(iter.second.stddev);
+		}
 	}
+	// complete the loop
+	output.x.push_back(output.x.front());
+	output.y.push_back(output.y.front());
+	output.err.push_back(output.err.front());
 	std::cout << "Done" << std::endl;
 	return output;
 }
@@ -343,17 +386,17 @@ const std::vector<std::filesystem::path> Ingester::GetCilPaths() const
 	return m_vCilPaths;
 }
 
-float Ingester::GetElectrodeDiameter()
+float Ingester::GetElectrodeDiameter() const
 {
 	return m_fElectrodeDiameter;
 }
 
-double Ingester::GetElectrodeArea_cm2()
+double Ingester::GetElectrodeArea_cm2() const
 {
 	return GetElectrodeArea_um2() / 1e8;
 }
 
-double Ingester::GetElectrodeArea_um2()
+double Ingester::GetElectrodeArea_um2() const
 {
 	return std::pow(m_fElectrodeDiameter / 2, 2) * M_PI;
 }

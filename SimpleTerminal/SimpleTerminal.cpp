@@ -18,6 +18,9 @@ int main(int argc, char* argv[])
 	std::string dataPath = "";
 	std::string deviceId = "";
 	bool bPlotAll = false;
+	bool bSkipEis = false;
+	bool bSkipCv = false;
+	bool bSkipCil = false;
 	for (int i = 1; i < argc; ++i)
 	{
 		if (strcmp(argv[i], "-p") == 0 && i < argc - 1)
@@ -43,6 +46,18 @@ int main(int argc, char* argv[])
 		{
 			bPlotAll = true;
 		}
+		else if (strcmp(argv[i], "--SkipEis") == 0)
+		{
+			bSkipEis = true;
+		}
+		else if (strcmp(argv[i], "--SkipCv") == 0)
+		{
+			bSkipCv = true;
+		}
+		else if (strcmp(argv[i], "--SkipCil") == 0)
+		{
+			bSkipCil = true;
+		}
 		else
 		{
 			std::cout << "unrecognised parameter \"" << argv[i] << "\"" << std::endl;
@@ -50,7 +65,6 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 	}
-
 
 	//SetConsoleOutputCP(CP_UTF8);
 	std::cout << TERM_RESET;
@@ -82,75 +96,88 @@ int main(int argc, char* argv[])
 
 		Ingester ingest(devicePath);
 
-		// Load EIS
-		std::cout << "\nFetching EIS values..." << std::endl;
-		std::map<std::string, std::array<double,3>> ImpedanceKeyvals = ingest.GetEisKeyvals();
-
-		// EIS Table
-		PrintTable EisTable({ "Electrode", "100 Hz", "1000 Hz", "1995 Hz" });
-		double sum = 0.0;
-		int validCount = 0;
-		for (const auto& iter : ImpedanceKeyvals)
+		// EIS
 		{
-			std::string colour = TERM_RED;
-			if (iter.second[1] <= 20000)
+			std::cout << "\nFetching EIS values..." << std::endl;
+			std::map<std::string, std::array<double, 3>> ImpedanceKeyvals = ingest.GetEisKeyvals();
+
+			// EIS Table
+			PrintTable EisTable({ "Electrode", "100 Hz", "1000 Hz", "1995 Hz" });
+			double sum = 0.0;
+			int validCount = 0;
+			for (const auto& iter : ImpedanceKeyvals)
 			{
-				sum += iter.second[0];
-				validCount += 1;
-				colour = TERM_GREEN;
+				std::string colour = TERM_RED;
+				if (iter.second[1] <= 20000)
+				{
+					sum += iter.second[0];
+					validCount += 1;
+					colour = TERM_GREEN;
+				}
+				EisTable.AddRow({ iter.first, RoundToStr(iter.second[0]), RoundToStr(iter.second[1]), RoundToStr(iter.second[2]) }, colour);
 			}
-			EisTable.AddRow({iter.first, RoundToStr(iter.second[0]), RoundToStr(iter.second[1]), RoundToStr(iter.second[2]) }, colour);
+			EisTable.Print(TERM_BOLDRED);
+			std::cout << "  Average: " << (sum / validCount) << std::endl;
+
+			// EIS Plot
+			std::array<T_ErrorBarD, 2> EisData = ingest.GetEisPlot();
+			grapher.GraphEIS(deviceId, EisData[0], EisData[1]);
 		}
-		EisTable.Print(TERM_BOLDRED);
-		std::cout << "  Average: " << (sum / validCount) << std::endl;
 
-		// EIS Plot
-		std::array<T_ErrorBarD, 2> EisData = ingest.GetEisPlot();
-		grapher.GraphEIS(deviceId, EisData[0], EisData[1]);
-
-		// Load CV
-		std::map<std::string, T_CvData> mCv = ingest.CalculateCscVals();
-		PrintTable CscTable({ "Electrode", "CSC (mC/cm^2)" });
-		sum = 0.0;
-		for (const auto& iter : mCv)
+		// CV
 		{
-			CscTable.AddRow({ iter.first, std::to_string(iter.second.dCsc) });
-			sum += iter.second.dCsc;
-		}
-		CscTable.Print(TERM_BOLDBLUE);
-		std::cout << "  Average: " << (sum / mCv.size()) << std::endl;
-
-		// CV Plot
-		T_ErrorBarD tCvPlot = ingest.GetCvPlot();
-		grapher.GraphCV(deviceId, tCvPlot);
-		if (bPlotAll)
-		{
-			for (const auto& [key, data] : mCv)
+			std::map<std::string, T_CvData> mCv = ingest.CalculateCscVals();
+			PrintTable CscTable({ "Electrode", "CSC (mC/cm^2)" });
+			double sum = 0.0;
+			std::vector<std::string> cvExcludes;
+			for (const auto& iter : mCv)
 			{
-				grapher.GraphCV(deviceId, key, data);
+				std::string colour = "";
+				if (iter.second.dCsc < 1 || iter.second.dCsc != iter.second.dCsc)
+				{
+					colour = TERM_RED;
+					cvExcludes.push_back(iter.first);
+				}
+				CscTable.AddRow({ iter.first, std::to_string(iter.second.dCsc) }, colour);
+				sum += iter.second.dCsc;
+			}
+			CscTable.Print(TERM_BOLDBLUE);
+			std::cout << "  Average: " << (sum / mCv.size()) << std::endl;
+
+			// CV Plot
+			T_ErrorBarD tCvPlot = ingest.GetCvPlot(cvExcludes);
+			grapher.GraphCV(deviceId, tCvPlot);
+			if (bPlotAll)
+			{
+				for (const auto& [key, data] : mCv)
+				{
+					grapher.GraphCV(deviceId, key, data);
+				}
 			}
 		}
 
 		// CIL
-		T_CilData cils = ingest.CalculateCilVals();
-		std::vector<std::string> cilTableHeaders{ "Electrode #" };
-		for (const auto& pulseWidth : cils.vPulseWidths) { cilTableHeaders.push_back(std::to_string(pulseWidth) + "us"); };
-		PrintTable cilTable(cilTableHeaders);
-		for (const auto& row : cils.mCilVals)
 		{
-			std::vector<std::string> rowtext{ std::to_string(row.first)};
-			for (const auto& val : row.second) { rowtext.push_back(std::to_string(val)); };
-			cilTable.AddRow(rowtext);
+			T_CilData cils = ingest.CalculateCilVals();
+			std::vector<std::string> cilTableHeaders{ "Electrode #" };
+			for (const auto& pulseWidth : cils.vPulseWidths) { cilTableHeaders.push_back(std::to_string(pulseWidth) + "us"); };
+			PrintTable cilTable(cilTableHeaders);
+			for (const auto& row : cils.mCilVals)
+			{
+				std::vector<std::string> rowtext{ std::to_string(row.first) };
+				for (const auto& val : row.second) { rowtext.push_back(std::to_string(val)); };
+				cilTable.AddRow(rowtext);
+			}
+			cilTable.Print(TERM_YELLOW);
+			// todo: show average CIL for each pulse width
+			//std::cout << "  Average: " << (sum / mCv.size()) << std::endl;
+
+
+			// Plot CIL values
+			grapher.GraphCIL(deviceId, cils);
 		}
-		cilTable.Print(TERM_YELLOW);
-		std::cout << "  Average: " << (sum / mCv.size()) << std::endl;
 
-
-		// Plot CIL values
-		grapher.GraphCIL(deviceId, cils);
-		//todo
-
-
+		std::cout << "\nFinished " << deviceId << "\n" << std::endl;
 		deviceId = "";
 	}
 }

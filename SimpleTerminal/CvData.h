@@ -3,7 +3,7 @@
 
 struct T_CvLoop
 {
-	int nLoopIndex;
+	int nLoopIndex = -1;
 	std::vector<double> vCurrents;
 	std::vector<double> vVoltages;
 };

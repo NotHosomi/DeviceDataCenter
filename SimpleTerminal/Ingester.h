@@ -14,25 +14,25 @@ class Ingester
 public:
 	Ingester(std::filesystem::path deviceDirectory);
 
-	std::map<std::string, std::array<double, 3>> GetEisKeyvals();
-	std::map<std::string, T_CvData> CalculateCscVals();
-	T_CilData CalculateCilVals();
+	std::map<std::string, std::array<double, 3>> GetEisKeyvals() const;
+	std::map<std::string, T_CvData> CalculateCscVals() const;
+	T_CilData CalculateCilVals() const;
 
-	std::array<T_ErrorBarD, 2> GetEisPlot();
-	T_ErrorBarD GetCvPlot();
+	std::array<T_ErrorBarD, 2> GetEisPlot() const;
+	T_ErrorBarD GetCvPlot(const std::vector<std::string>& vExcludes) const;
 
 	const std::vector<std::filesystem::path> GetEisFiles() const;
 	const std::vector<std::filesystem::path> GetCvFiles() const;
 	const std::vector<std::filesystem::path> GetCilPaths() const;
 
-	float GetElectrodeDiameter();
-	double GetElectrodeArea_cm2();
-	double GetElectrodeArea_um2();
+	float GetElectrodeDiameter() const;
+	double GetElectrodeArea_cm2() const;
+	double GetElectrodeArea_um2() const;
 
 private:
-	std::vector<CsvFile> readFiles(const std::vector<std::filesystem::path>& fileaddrs);
-	T_CvData parseCvFile(const CsvFile& csv);
-	double hysteresisArea(const std::vector<double>& x, const std::vector<double>& y);
+	std::vector<CsvFile> readFiles(const std::vector<std::filesystem::path>& fileaddrs) const;
+	T_CvData parseCvFile(const CsvFile& csv) const;
+	double hysteresisArea(const std::vector<double>& x, const std::vector<double>& y) const;
 	std::vector<std::filesystem::path> m_vEisPaths;
 	std::vector<std::filesystem::path> m_vCvPaths;
 	std::vector<std::filesystem::path> m_vCilPaths;

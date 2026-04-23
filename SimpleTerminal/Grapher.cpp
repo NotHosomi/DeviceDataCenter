@@ -65,7 +65,6 @@ void Grapher::GraphEIS(std::string sId, T_ErrorBarD tZ, T_ErrorBarD tPhase)
 	std::cout << "Done\n" << std::endl;
 }
 
-// TODO: Graph CV
 void Grapher::GraphCV(std::string sId, T_ErrorBarD tLoop)
 {
 	using namespace matplot;
@@ -110,12 +109,15 @@ void Grapher::GraphCV(std::string sId, std::string filename, T_CvData tElectrode
 
 	std::string path = m_PlotDir.string() + "/" + sId + "/Plots/CV/";
 	std::filesystem::create_directories(path);
+	matplot::gca()->width(640);
+	matplot::gca()->height(480);
 	matplot::save(path + filename +"CV.png");
 	std::cout << "Done\n" << std::endl;
 }
 
 void Grapher::GraphCIL(std::string sId, const T_CilData& data)
 {
+	// todo graph CIL
 	if (data.vPulseWidths.size() <= 1)
 	{
 		std::cout << "Only one pulse width found - Skipping CIL Plot" << std::endl;
