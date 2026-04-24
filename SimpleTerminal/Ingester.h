@@ -36,6 +36,7 @@ private:
 	std::vector<std::filesystem::path> m_vEisPaths;
 	std::vector<std::filesystem::path> m_vCvPaths;
 	std::vector<std::filesystem::path> m_vCilPaths;
+	std::vector<std::filesystem::path> m_vCrosstalkPaths;
 
 	float m_fElectrodeDiameter;
 };

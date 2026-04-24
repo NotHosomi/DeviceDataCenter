@@ -24,7 +24,7 @@ Ingester::Ingester(std::filesystem::path deviceDirectory)
 		{
 			path = entry.path().string();
 			colcmd = TERM_RESET;
-			if (path.find("exclude") != std::string::npos || path.find(".txt") == std::string::npos)
+			if (path.find("exclude") != std::string::npos || path.find(".txt") == std::string::npos || path.find(".png") != std::string::npos)
 			{
 				colcmd = TERM_MAGENTA;
 			}
@@ -38,10 +38,15 @@ Ingester::Ingester(std::filesystem::path deviceDirectory)
 				colcmd = TERM_BOLDBLUE;
 				m_vCvPaths.push_back(path);
 			}
-			else if (path.find("CIL") != std::string::npos)
+			else if (path.find("CIL") != std::string::npos || path.find("VoltageTransients") != std::string::npos)
 			{
 				colcmd = TERM_BOLDYELLOW;
 				m_vCilPaths.push_back(path);
+			}
+			else if (path.find("Crosstalk") != std::string::npos || path.find("Crossimpedance") != std::string::npos)
+			{
+				colcmd = TERM_CYAN;
+				m_vCrosstalkPaths.push_back(path);
 			}
 			else
 			{
@@ -99,24 +104,34 @@ std::vector<CsvFile> Ingester::readFiles(const std::vector<std::filesystem::path
 
 T_CvData Ingester::parseCvFile(const CsvFile& csv) const
 {
-	T_CvData tOutput;
-	std::vector<std::string> scanStrs = csv.GetCol("Scan");
-	std::vector<std::string> voltageStrs = csv.GetCol("WE(1).Potential (V)");
-	std::vector<std::string> currentStrs = csv.GetCol("WE(1).Current (A)");
-
-	std::vector<int> vLoopOffsets;
-	for (int i = 0; i < csv.GetCol(0).size(); ++i)
+	try
 	{
-		int loop = std::atoi(scanStrs[i].c_str());
-		if (loop != tOutput.vLoops.size())
+
+		T_CvData tOutput;
+		std::vector<std::string> scanStrs = csv.GetCol("Scan");
+		std::vector<std::string> voltageStrs = csv.GetCol("WE(1).Potential (V)");
+		std::vector<std::string> currentStrs = csv.GetCol("WE(1).Current (A)");
+
+		std::vector<int> vLoopOffsets;
+		for (int i = 0; i < csv.GetCol(0).size(); ++i)
 		{
-			tOutput.vLoops.emplace_back();
-			tOutput.vLoops.back().nLoopIndex = static_cast<int>(tOutput.vLoops.size()) - 1;
+			int loop = std::atoi(scanStrs[i].c_str());
+			if (loop != tOutput.vLoops.size())
+			{
+				tOutput.vLoops.emplace_back();
+				tOutput.vLoops.back().nLoopIndex = static_cast<int>(tOutput.vLoops.size()) - 1;
+			}
+			tOutput.vLoops.back().vCurrents.push_back(std::atof(currentStrs[i].c_str()));
+			tOutput.vLoops.back().vVoltages.push_back(std::atof(voltageStrs[i].c_str()));
 		}
-		tOutput.vLoops.back().vCurrents.push_back(std::atof(currentStrs[i].c_str()));
-		tOutput.vLoops.back().vVoltages.push_back(std::atof(voltageStrs[i].c_str()));
+
+		return tOutput;
 	}
-	return tOutput;
+	catch (std::exception e)
+	{
+		std::cout << TERM_RED << "Failed to parse CV file \"" << csv.GetFilename() << "\"" << TERM_RESET << std::endl;
+		return {};
+	}
 }
 
 double Ingester::hysteresisArea(const std::vector<double>& x, const std::vector<double>& y) const
@@ -171,6 +186,7 @@ std::map<std::string, T_CvData> Ingester::CalculateCscVals() const
 	for(auto entry : csvList)
 	{
 		T_CvData tOutput = parseCvFile(entry);
+		if (tOutput.vLoops.size() == 0) { continue; }
 
 		std::vector<int> vLoopOffsets;
 		vLoopOffsets.push_back(0);
@@ -209,10 +225,10 @@ T_CilData Ingester::CalculateCilVals() const
 {
 	if (m_vCilPaths.size() == 0)
 	{
-		std::cout << "No voltage transients data found" << std::endl;
+		std::cout << "\nNo voltage transients data found" << std::endl;
 		return {};
 	}
-	std::cout << "Reading voltage transients..." << std::endl;
+	std::cout << "\nReading voltage transients..." << std::endl;
 	T_CilData output;
 	if (m_vCilPaths.size() > 1)
 	{
@@ -244,7 +260,7 @@ T_CilData Ingester::CalculateCilVals() const
 
 std::array<T_ErrorBarD, 2> Ingester::GetEisPlot() const
 {
-	std::cout << "Generating EIS plot..." << std::flush;
+	std::cout << "Building EIS plot..." << std::flush;
 	std::vector<CsvFile> csvList = readFiles(m_vEisPaths);
 
 	std::erase_if(csvList, [](const CsvFile& data) {
@@ -302,7 +318,14 @@ struct T_Voltage
 	{
 		if (static_cast<int>(eDir) == static_cast<int>(other.eDir))
 		{
-			return dVal < other.dVal;
+			if (eDir == E_ScanDir::Forward)
+			{
+				return dVal < other.dVal;
+			}
+			else
+			{
+				return dVal > other.dVal;
+			}
 		}
 		return static_cast<int>(eDir) < static_cast<int>(other.eDir);
 	}
@@ -318,8 +341,11 @@ T_ErrorBarD Ingester::GetCvPlot(const std::vector<std::string>& vExcludes) const
 			continue;
 		}
 		T_CvData tData = parseCvFile(csv);
+		if (tData.vLoops.size() == 0) { continue; }
+
 		// average per loop
 		std::map<T_Voltage, double>& loopAvrg = grossCv.emplace_back();	// todo: this doesn't work, cuz it looses the ORDER
+		std::map<T_Voltage, int> binInstances;
 		for (int i = 1; i < tData.vLoops.size(); ++i)
 		{
 			const T_CvLoop& loop = tData.vLoops[i];
@@ -339,12 +365,18 @@ T_ErrorBarD Ingester::GetCvPlot(const std::vector<std::string>& vExcludes) const
 				}
 				if (!loopAvrg.contains(key))
 				{
-					loopAvrg.insert({ key, loop.vCurrents[j] / tData.vLoops.size() });
+					loopAvrg.insert({ key, loop.vCurrents[j]});
+					binInstances.insert({ key, 1 });
 				}
 				else
 				{
-					loopAvrg.at(key) += loop.vCurrents[j] / tData.vLoops.size();
+					loopAvrg.at(key) += loop.vCurrents[j];
+					binInstances.at(key) += 1;
 				}
+			}
+			for (auto& [key, val] : loopAvrg)
+			{
+				val /= binInstances.at(key);
 			}
 		}
 	}

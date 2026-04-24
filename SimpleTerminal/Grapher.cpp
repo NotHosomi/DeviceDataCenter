@@ -84,8 +84,13 @@ void Grapher::GraphCV(std::string sId, T_ErrorBarD tLoop)
 	ylabel("Current (A)");
 	xlabel("Voltage (V)");
 
+	matplot::xlim({ -0.65, 0.85 });
+	matplot::ylim({ -2e-5, 2e-5 });
+
 	std::string path = m_PlotDir.string() + "/" + sId + "/Plots/";
 	std::filesystem::create_directories(path);
+	matplot::gcf()->width(m_nCvWidth);
+	matplot::gcf()->height(m_nCvHeight);
 	save(path + "CV.png");
 	std::cout << "Done\n" << std::endl;
 }
@@ -107,12 +112,15 @@ void Grapher::GraphCV(std::string sId, std::string filename, T_CvData tElectrode
 	matplot::ylabel("Current (A)");
 	matplot::xlabel("Voltage (V)");
 
+	matplot::xlim({ -0.65, 0.85 });
+	matplot::ylim({ -2e-5, 2e-5 });
+
 	std::string path = m_PlotDir.string() + "/" + sId + "/Plots/CV/";
 	std::filesystem::create_directories(path);
-	matplot::gca()->width(640);
-	matplot::gca()->height(480);
+	matplot::gcf()->width(m_nCvWidth);
+	matplot::gcf()->height(m_nCvHeight);
 	matplot::save(path + filename +"CV.png");
-	std::cout << "Done\n" << std::endl;
+	std::cout << "Done" << std::endl;
 }
 
 void Grapher::GraphCIL(std::string sId, const T_CilData& data)

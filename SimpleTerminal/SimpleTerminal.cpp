@@ -84,6 +84,10 @@ int main(int argc, char* argv[])
 		{
 			std::cout << "Input device ID: ";
 			std::cin >> deviceId;
+			if (deviceId == "quit")
+			{
+				break;
+			}
 			std::cin.clear();
 		}
 		devicePath = dataPath + "/" + deviceId;
@@ -97,6 +101,7 @@ int main(int argc, char* argv[])
 		Ingester ingest(devicePath);
 
 		// EIS
+		if (!bSkipEis)
 		{
 			std::cout << "\nFetching EIS values..." << std::endl;
 			std::map<std::string, std::array<double, 3>> ImpedanceKeyvals = ingest.GetEisKeyvals();
@@ -125,6 +130,7 @@ int main(int argc, char* argv[])
 		}
 
 		// CV
+		if (!bSkipCv)
 		{
 			std::map<std::string, T_CvData> mCv = ingest.CalculateCscVals();
 			PrintTable CscTable({ "Electrode", "CSC (mC/cm^2)" });
@@ -157,6 +163,7 @@ int main(int argc, char* argv[])
 		}
 
 		// CIL
+		if(!bSkipCil)
 		{
 			T_CilData cils = ingest.CalculateCilVals();
 			std::vector<std::string> cilTableHeaders{ "Electrode #" };
