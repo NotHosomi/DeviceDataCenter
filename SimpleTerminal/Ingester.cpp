@@ -76,7 +76,7 @@ Ingester::Ingester(std::filesystem::path deviceDirectory)
 			std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 		}
 		std::cout << "Storing device details..." << std::flush;
-		StoreDeviceDetails(deviceDirectory / "DeviceInfo.json", info)
+		StoreDeviceDetails(deviceDirectory / "DeviceInfo.json", info);
 		std::cout << "Done" << std::endl;
 	}
 }
@@ -141,7 +141,6 @@ double Ingester::hysteresisArea(const std::vector<double>& x, const std::vector<
 
 bool Ingester::FetchDeviceDetails(const std::filesystem::path& path)
 {
-	T_DeviceInfo info;
 	if (!std::filesystem::exists(path))
 	{
 		return false;
@@ -443,7 +442,7 @@ const std::vector<std::filesystem::path> Ingester::GetCilPaths() const
 
 float Ingester::GetElectrodeDiameter() const
 {
-	return m_fElectrodeDiameter;
+	return m_tDeviceInfo.electrodeDiameter;
 }
 
 double Ingester::GetElectrodeArea_cm2() const
@@ -453,5 +452,5 @@ double Ingester::GetElectrodeArea_cm2() const
 
 double Ingester::GetElectrodeArea_um2() const
 {
-	return std::pow(m_fElectrodeDiameter / 2, 2) * M_PI;
+	return std::pow(m_tDeviceInfo.electrodeDiameter / 2, 2) * M_PI;
 }

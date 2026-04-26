@@ -4,7 +4,7 @@
 
 struct T_DeviceInfo
 {
-	int electrodeDiameter;
+	float electrodeDiameter;
 	int electrodeCount;
 	NLOHMANN_DEFINE_TYPE_INTRUSIVE(T_DeviceInfo, electrodeDiameter, electrodeCount);
 };
