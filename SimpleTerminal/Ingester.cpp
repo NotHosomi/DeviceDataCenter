@@ -10,6 +10,7 @@
 #include "stddev.h"
 #include "CvData.h"
 #include "JsonLoader.h"
+#include "stddev.h"
 
 # define M_PI           3.14159265358979323846
 
@@ -145,8 +146,7 @@ std::map<std::string, std::vector<double>> Ingester::GetEisKeyvals(const std::ve
 {
 	std::map<std::string, std::vector<double>> out;
 	std::vector<CsvFile> csvList = readFiles(m_vEisPaths);
-	std::vector<double> avrgs(vKeyVals.size(), 0);
-	std::vector<int> avrgInstances(vKeyVals.size(), 0);
+	std::vector<std::vector<double>> allKeyvals(vKeyVals.size(), {});
 	for (const auto& entry : csvList)
 	{
 		std::vector<double> keyvals(vKeyVals.size(), -1);
@@ -159,18 +159,23 @@ std::map<std::string, std::vector<double>> Ingester::GetEisKeyvals(const std::ve
 				{
 					double val = std::atof(entry.GetCol("Z (\xCE\xA9)")[index].c_str());
 					keyvals[i] = val;
-					avrgs[i] += val;
-					avrgInstances[i] += 1;
+					allKeyvals[i].push_back(val);
 				}
 			}
 		}
 		out.insert({ entry.GetFilename(), keyvals });
 	}
-	for (int i = 0; i < avrgs.size(); ++i)
+	std::vector<T_Stats> stats(vKeyVals.size(), {});
+	std::vector<double> vAvrgs(vKeyVals.size(), 0);
+	std::vector<double> vStddev(vKeyVals.size(), 0);
+	for (int i = 0; i < allKeyvals.size(); ++i)
 	{
-		avrgs[i] /= avrgInstances[i];
+		T_Stats stats = stddev(allKeyvals[i]);
+		vAvrgs[i] = stats.mean;
+		vStddev[i] = stats.stddev;
 	}
-	out.insert({ "{AVRG}", avrgs });
+	out.insert({ "{AVRG}", vAvrgs });
+	out.insert({ "{STDDEV}", vStddev });
 	return out;
 }
 
@@ -193,7 +198,7 @@ std::map<std::string, T_CvData> Ingester::CalculateCscVals() const
 		for (int i = 0; i < entry.GetCol(0).size(); ++i)
 		{
 			int loop = scanCol[i];
-			if (loop != tOutput.vLoops.size())
+			if (loop != vLoopOffsets.size())
 			{
 				vLoopOffsets.push_back(i);
 			}
@@ -207,7 +212,8 @@ std::map<std::string, T_CvData> Ingester::CalculateCscVals() const
 		area /= tOutput.vLoops.size();
 
 		// convert area to CSC
-		int t1index = ((vLoopOffsets[2] - vLoopOffsets[1]) / 2) + vLoopOffsets[1];
+		int windowSize = static_cast<int>((vLoopOffsets[2] - vLoopOffsets[1]) * 0.1f);
+		int t1index = vLoopOffsets[1] + windowSize;
 		int t0index = vLoopOffsets[1];
 		double timeDelta = std::atof(entry.GetCol("Time (s)")[t1index].c_str())
 						 - std::atof(entry.GetCol("Time (s)")[t0index].c_str());
@@ -237,36 +243,52 @@ T_CilData Ingester::CalculateCilVals() const
 	if (csv.GetHeadings().size() == 1)
 	{
 		csv = CsvFile(m_vCilPaths[0].string(), ';');
+		if (csv.GetHeadings().size() == 1)
+		{
+			std::cout << "Could not read voltage transients file" << std::endl;
+		}
 	}
 	for (int i = 1; i < csv.GetHeadings().size(); ++i)
 	{
 		output.vPulseWidths.push_back(std::atoi(csv.GetHeadings()[i].c_str()));
 	}
-	output.vAvrgCils.resize(output.vPulseWidths.size(), 0);
-	std::vector<int> avrgInstances(output.vAvrgCils.size(), 0);
-	
-	for (int row = 0; row < csv.GetCol(0).size(); ++row)
+
+	std::vector<T_Stats> statsPerElectrode;
+	std::vector<T_Stats> statsPerElectrodeNorm;
+
+	for (ElectrodeNum electrode = 0; electrode < csv.GetCol(0).size(); ++electrode)
 	{
-		int elecNum = std::atoi(csv.GetCol(0)[row].c_str());
+		int elecNum = std::atoi(csv.GetCol(0)[electrode].c_str());
 		output.mCilVals.insert({ elecNum, {} });
+		output.mCilValsNormalised.insert({ elecNum, {} });
 		for (int col = 0; col < csv.GetHeadings().size() - 1; ++col)
 		{
-			double charge =
-				std::atof(csv.GetCol(col + 1)[row].c_str()) * 1e-6 // scale to amps
+			double cil =
+				std::atof(csv.GetCol(col + 1)[electrode].c_str()) * 1e-6 // scale to amps
 				* output.vPulseWidths[col] * 1e-6 // scale to seconds
 				* 1e3; // scale to milliCoulombs
-			double cil = charge / GetElectrodeArea_cm2();
 			output.mCilVals.at(elecNum).push_back(static_cast<float>(cil));
-
-			output.vAvrgCils[col] += static_cast<float>(cil);
-			avrgInstances[col] += 1;
+			double cilNorm = cil / GetElectrodeArea_cm2();
+			output.mCilValsNormalised.at(elecNum).push_back(static_cast<float>(cilNorm));
 		}
 	}
-	for (int i = 0; i < output.vAvrgCils.size(); ++i)
-	{
-		output.vAvrgCils[i] /= avrgInstances[i];
-	}
 
+	std::vector<T_Stats> statsPerPulseWidth;
+	for (int pulseWidthIndex = 0; pulseWidthIndex < output.vPulseWidths.size(); ++pulseWidthIndex)
+	{
+		std::vector<float> cilsPerPulseWidth;
+		std::vector<float> cilsNormPerPulseWidth;
+		for (const auto& [key, val] : output.mCilVals)
+		{
+			cilsPerPulseWidth.push_back(val[pulseWidthIndex]);
+		}
+		for (const auto& [key, val] : output.mCilValsNormalised)
+		{
+			cilsNormPerPulseWidth.push_back(val[pulseWidthIndex]);
+		}
+		output.vCilStats.push_back(stddev(cilsPerPulseWidth));
+		output.vCilStatsNormalised.push_back(stddev(cilsNormPerPulseWidth));
+	}	
 	return output;
 }
 
@@ -392,6 +414,11 @@ T_ErrorBarD Ingester::GetCvPlot(const std::vector<std::string>& vExcludes) const
 			}
 		}
 	}
+	if (grossCv.size() == 0)
+	{
+		return {};
+	}
+	
 	// average across files, with stddev
 	std::map<T_Voltage, T_Stats> stats = stddev(grossCv);
 

@@ -14,7 +14,7 @@ struct T_EisConfig
 
 struct T_CvConfig
 {
-	float minValidCsc = 100;
+	float minValidCsc = 0.1;
 	bool calcCsc = true;
 	bool plotCv = true;
 	bool plotEachElectrode = false;

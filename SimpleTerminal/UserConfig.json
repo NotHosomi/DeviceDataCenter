@@ -1,0 +1,25 @@
+{
+  "cil": {
+    "calcCil": true,
+    "plotCil": true,
+    "plotEachElectrode": false
+  },
+  "cv": {
+    "calcCsc": true,
+    "minValidCsc": 0.10000000149011612,
+    "plotCv": true,
+    "plotEachElectrode": false
+  },
+  "dataDirectory": "TestData",
+  "eis": {
+    "fetchKeyvals": true,
+    "keyVals": [
+      "100",
+      "1000",
+      "1995.3"
+    ],
+    "maxValidImpedance": 20000.0,
+    "plotEachElectrode": false,
+    "plotEis": true
+  }
+}

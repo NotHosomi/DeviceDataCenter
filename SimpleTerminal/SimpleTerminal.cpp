@@ -15,13 +15,36 @@
 
 std::string RoundToStr(double num) { return std::to_string(static_cast<int>(num + 0.5)); }
 
+void PrintCilValues(std::vector<int> vPulseWidths, std::map<int, std::vector<float>> mVals, std::vector<T_Stats> vStats)
+{
+	std::vector<std::string> cilTableHeaders{ "Electrode #" };
+	for (const auto& pulseWidth : vPulseWidths) { cilTableHeaders.push_back(std::to_string(pulseWidth) + "us"); };
+	PrintTable cilTable(cilTableHeaders);
+	for (const auto& row : mVals)
+	{
+		std::vector<std::string> rowtext{ std::to_string(row.first) };
+		for (const auto& val : row.second) { rowtext.push_back(std::to_string(val)); };
+		cilTable.AddRow(rowtext);
+	}
+	std::vector<std::string> avrgRowText{ "{AVRG}" };
+	std::vector<std::string> stddevRowText{ "{STDDEV}" };
+	for (const auto& stats : vStats)
+	{
+		avrgRowText.push_back(std::to_string(stats.mean));
+		stddevRowText.push_back(std::to_string(stats.stddev));
+	};
+	cilTable.AddRow(avrgRowText);
+	cilTable.AddRow(stddevRowText);
+	cilTable.Print(TERM_YELLOW);
+}
+
 int main(int argc, char* argv[])
 {
 	std::string deviceId = "";
 
 	T_UserConfig tUserConfig;
 	std::cout << "Loading user config..." << std::flush;
-	if (LoadJson<T_UserConfig>("./UserConfig.json", tUserConfig))
+	if (!LoadJson<T_UserConfig>("./UserConfig.json", tUserConfig))
 	{
 		std::cout << "Failed -- Creating default..." << std::flush;
 		SaveJson("./UserConfig.json", tUserConfig);
@@ -207,22 +230,10 @@ int main(int argc, char* argv[])
 		if(tUserConfig.cil.calcCil)
 		{
 			T_CilData cils = ingest.CalculateCilVals();
-			std::vector<std::string> cilTableHeaders{ "Electrode #" };
-			for (const auto& pulseWidth : cils.vPulseWidths) { cilTableHeaders.push_back(std::to_string(pulseWidth) + "us"); };
-			PrintTable cilTable(cilTableHeaders);
-			for (const auto& row : cils.mCilVals)
-			{
-				std::vector<std::string> rowtext{ std::to_string(row.first) };
-				for (const auto& val : row.second) { rowtext.push_back(std::to_string(val)); };
-				cilTable.AddRow(rowtext);
-			}
-			std::vector<std::string> rowtext{ "{AVRG}" };
-			for (const auto& val : cils.vAvrgCils) { rowtext.push_back(std::to_string(val)); };
-			cilTable.AddRow(rowtext);
-
-			cilTable.Print(TERM_YELLOW);
-			// todo: show average CIL for each pulse width
-			//std::cout << "  Average: " << (sum / mCv.size()) << std::endl;
+			std::cout << "\nCIL values" << std::endl;
+			PrintCilValues(cils.vPulseWidths, cils.mCilVals, cils.vCilStats);
+			std::cout << "\nNormalised CIL values" << std::endl;
+			PrintCilValues(cils.vPulseWidths, cils.mCilValsNormalised, cils.vCilStatsNormalised);
 
 			if (tUserConfig.cil.plotCil)
 			{

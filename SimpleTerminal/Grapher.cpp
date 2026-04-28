@@ -67,6 +67,11 @@ void Grapher::GraphEIS(std::string sId, T_ErrorBarD tZ, T_ErrorBarD tPhase)
 
 void Grapher::GraphCV(std::string sId, T_ErrorBarD tLoop)
 {
+	if (tLoop.x.size() == 0)
+	{
+		std::cout << "Not enough CV data to plot" << std::flush;
+		return;
+	}
 	using namespace matplot;
 	std::cout << "Rendering CV plot... " << std::flush;
 

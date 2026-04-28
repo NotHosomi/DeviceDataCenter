@@ -137,6 +137,7 @@
     <ClCompile Include="Ingester.cpp" />
     <ClCompile Include="PrintTable.cpp" />
     <ClCompile Include="SimpleTerminal.cpp" />
+    <ClCompile Include="stddev.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="JsonLoader.h" />
