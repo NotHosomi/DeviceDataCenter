@@ -125,6 +125,7 @@ E_CmdErr Commands::CompareDevices(const std::string& vArgs)
 E_CmdErr Commands::AverageDevices(const std::string& vArgs)
 {
 
+	m_pCore->BatchAverages(SU::Delimit(vArgs, " "));
 	return E_CmdErr();
 }
 

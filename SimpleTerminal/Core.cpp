@@ -8,6 +8,7 @@
 #include "JsonLoader.h"
 #include "Commands.h"
 #include "Options.h"
+#include "BatchData.h"
 
 
 Core::Core()
@@ -302,4 +303,40 @@ void Core::PrintCilVals(std::vector<int> vPulseWidths, std::map<int, std::vector
 	cilTable.AddRow(avrgRowText);
 	cilTable.AddRow(stddevRowText);
 	cilTable.Print(TERM_YELLOW);
+}
+
+T_DeviceData Core::BatchAverages(const std::vector<std::string> sIds)
+{
+	std::vector<T_DeviceData> devices;
+	for (const auto& sId : sIds)
+	{
+		if (m_Archive.GetDevice(sId).sDeviceId == "")
+		{
+			std::cout << "\nFound device " << sId << " in archive" << std::endl;
+			devices.push_back(m_Archive.GetDevice(sId));
+		}
+		else
+		{
+			std::cout << "\nDevice " << sId << " not in archive" << std::flush;
+			if(Run(sId, static_cast<E_DataTypes>(E_DataTypes::kEis | E_DataTypes::kCv | E_DataTypes::kCil)) == E_CmdErr::NoData)
+			{
+				devices.push_back(m_Archive.GetDevice(sId));
+			}			
+		}
+	}
+
+	std::map<std::string, std::vector<double>> eisAvrgs;
+	std::map<std::string, std::vector<double>> eisStddevs;
+	for (auto& device : devices)
+	{
+		if (!device.tEis.has_value())
+		{
+			continue;
+		}
+		for (int i = 0; i < device.tEis.value().vAverages.size(); ++i)
+		{
+
+		}
+	}
+
 }

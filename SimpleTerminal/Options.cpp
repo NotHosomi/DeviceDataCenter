@@ -8,9 +8,11 @@ Options::Options()
 	if (Deserialise())
 	{
 		std::cout << "Done" << std::endl;
-		return;
 	}
-	std::cout << "Failed. Using defaults" << std::endl;
+	else
+	{
+		std::cout << "Failed. Using defaults" << std::endl;
+	}
 
 	AddOpt({ "demoOpt", "This is an example option", E_OptType::Int, 1 });
 	AddOpt({ "demoOpt2", "This is an example option", E_OptType::Float, 0.5 });
@@ -78,6 +80,10 @@ const std::map<std::string, T_Opt>& Options::Data()
 
 void Options::AddOpt(const T_Opt& tOpt)
 {
+	if (m_mOptions.contains(tOpt.sName))
+	{
+		return;
+	}
 	m_mOptions.insert({ tOpt.sName, tOpt });
 }
 
