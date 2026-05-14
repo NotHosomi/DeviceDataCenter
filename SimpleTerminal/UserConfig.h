@@ -31,7 +31,8 @@ struct T_CilConfig
 
 struct T_UserConfig
 {
-	std::string dataDirectory;
+	std::string dataDirectory = "";
+	std::string plotDirectory = "./Plots";
 	T_EisConfig eis;
 	T_CvConfig cv;
 	T_CilConfig cil;

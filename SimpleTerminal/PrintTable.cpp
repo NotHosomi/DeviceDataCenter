@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <iostream>
 #include "TerminalColours.h"
+#include "StrUtils.h"
 
 PrintTable::PrintTable(const std::vector<std::string>& vHeaders) :
 	m_vHeaders(vHeaders)
@@ -9,7 +10,7 @@ PrintTable::PrintTable(const std::vector<std::string>& vHeaders) :
 	m_vColumnWidths.resize(m_vHeaders.size());
 	for (int i = 0; i < m_vHeaders.size(); ++i)
 	{
-		m_vColumnWidths[i] = m_vHeaders[i].size();
+		m_vColumnWidths[i] = static_cast<int>(m_vHeaders[i].size());
 	}
 }
 

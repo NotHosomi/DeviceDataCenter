@@ -130,17 +130,26 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Archive.cpp" />
     <ClCompile Include="CilData.h" />
+    <ClCompile Include="Commands.cpp" />
+    <ClCompile Include="Core.cpp" />
     <ClCompile Include="CsvFile.cpp" />
     <ClCompile Include="ErrorBarData.cpp" />
     <ClCompile Include="Grapher.cpp" />
     <ClCompile Include="Ingester.cpp" />
+    <ClCompile Include="Options.cpp" />
     <ClCompile Include="PrintTable.cpp" />
     <ClCompile Include="SimpleTerminal.cpp" />
     <ClCompile Include="stddev.cpp" />
     <ClCompile Include="DeviceData.cpp" />
+    <ClCompile Include="StrUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Archive.h" />
+    <ClInclude Include="Commands.h" />
+    <ClInclude Include="Core.h" />
+    <ClInclude Include="EisData.h" />
     <ClInclude Include="JsonLoader.h" />
     <ClInclude Include="CsvFile.h" />
     <ClInclude Include="CvData.h" />
@@ -148,8 +157,10 @@
     <ClInclude Include="ErrorBarData.h" />
     <ClInclude Include="Grapher.h" />
     <ClInclude Include="Ingester.h" />
+    <ClInclude Include="Options.h" />
     <ClInclude Include="PrintTable.h" />
     <ClInclude Include="stddev.h" />
+    <ClInclude Include="StrUtils.h" />
     <ClInclude Include="Symbols.h" />
     <ClInclude Include="TerminalColours.h" />
     <ClInclude Include="DeviceData.h" />
