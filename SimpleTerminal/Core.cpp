@@ -66,7 +66,7 @@ E_CmdErr Core::Run(const std::string sDeviceId, E_DataTypes eModes)
 	bool isInArchive = data.sDeviceId != "";
 	if (isInArchive)
 	{
-		std::cout << "Device " << sDeviceId << "found in archive" << std::endl;
+		std::cout << "Device " << sDeviceId << " found in archive" << std::endl;
 	}
 	else
 	{
@@ -108,13 +108,9 @@ T_EisData Core::Eis(T_DeviceData& tDeviceData, const Ingester& ingest, const T_E
 	// EIS
 	if (!tDeviceData.tEis.has_value() || Options::Get().GetOpt<bool>("arch-overwrite") || Options::Get().GetOpt<bool>("arch-recalc"))
 	{
-		std::cout << "\nFetching EIS values...";
+		std::cout << "\nFetching EIS values..." << std::flush;
 		T_EisData newdata = ingest.ParseEis(tConfig.keyVals);
-		if (newdata.mImpedances.size() == 0)
-		{
-			std::cout << "No EIS data found" << std::endl;
-		}
-		else
+		if (newdata.mImpedances.size() != 0)
 		{
 			tDeviceData.tEis = newdata;
 		}
@@ -128,12 +124,12 @@ T_EisData Core::Eis(T_DeviceData& tDeviceData, const Ingester& ingest, const T_E
 	PrintEisVals(tDeviceData.tEis.value(), tConfig);
 
 	// EIS Plot
-	if (std::get<int>(Options::Get().GetOpt("eis-plot-avrg").val) == 1)
+	if (Options::Get().GetOpt<bool>("eis-plot-avrg"))
 	{
 		std::array<T_ErrorBarD, 2> EisData = ingest.GetEisPlot();
 		m_Grapher.GraphDeviceEIS(tDeviceData.sDeviceId, EisData[0], EisData[1]);
 	}
-	if (tConfig.plotEachElectrode)
+	if (Options::Get().GetOpt<bool>("eis-plot-each"))
 	{
 		// todo: add this to the grapher
 	}
@@ -166,7 +162,7 @@ T_CvData Core::Cv(T_DeviceData& tDeviceData, const Ingester& ingest, const T_CvC
 	PrintCscVals(tDeviceData.tCv.value());
 
 	// Plot each CV
-	if (tConfig.plotEachElectrode)
+	if (Options::Get().GetOpt<bool>("cv-plot-each"))
 	{
 		for (const auto& [key, data] : tDeviceData.tCv.value().mElectrodes)
 		{
@@ -175,7 +171,7 @@ T_CvData Core::Cv(T_DeviceData& tDeviceData, const Ingester& ingest, const T_CvC
 	}
 	
 	// Plot aggregate CV
-	if (tConfig.plotCv)
+	if (Options::Get().GetOpt<bool>("cv-plot-avrg"))
 	{
 		T_ErrorBarD tCvPlot = ingest.GetCvPlot();
 		m_Grapher.GraphDeviceCV(tDeviceData.sDeviceId, tCvPlot);
@@ -304,24 +300,29 @@ void Core::PrintCilVals(std::vector<int> vPulseWidths, std::map<int, std::vector
 	cilTable.Print(TERM_YELLOW);
 }
 
-T_DeviceData Core::BatchAverages(const std::vector<std::string> sIds)
+bool Core::BatchAverages(const std::vector<std::string> sIds)
 {
 	std::vector<T_DeviceData> devices;
 	for (const auto& sId : sIds)
 	{
 		if (m_Archive.GetDevice(sId).sDeviceId == "")
 		{
-			std::cout << "\nFound device " << sId << " in archive" << std::endl;
-			devices.push_back(m_Archive.GetDevice(sId));
+			std::cout << "\nDevice " << sId << " not in archive" << std::flush;
+			if (Run(sId, static_cast<E_DataTypes>(E_DataTypes::kEis | E_DataTypes::kCv | E_DataTypes::kCil)) == E_CmdErr::None)
+			{
+				devices.push_back(m_Archive.GetDevice(sId));
+			}
 		}
 		else
 		{
-			std::cout << "\nDevice " << sId << " not in archive" << std::flush;
-			if(Run(sId, static_cast<E_DataTypes>(E_DataTypes::kEis | E_DataTypes::kCv | E_DataTypes::kCil)) == E_CmdErr::NoData)
-			{
-				devices.push_back(m_Archive.GetDevice(sId));
-			}			
+			std::cout << "\nFound device " << sId << " in archive" << std::endl;
+			devices.push_back(m_Archive.GetDevice(sId));
 		}
+	}
+	if (devices.size() < 2)
+	{
+		std::cout << "Need more than 2 devices to run a batch stat pool" << std::endl;
+		return false;
 	}
 
 	// EIS
@@ -330,13 +331,14 @@ T_DeviceData Core::BatchAverages(const std::vector<std::string> sIds)
 	{
 		if (!device.tEis.has_value())
 		{
+			std::cout << device.sDeviceId << " is missing EIS data" << std::endl;
 			continue;
 		}
 		const T_EisData& eis = device.tEis.value();
 		for (int i = 0; i < eis.vFrequencies.size(); ++i)
 		{
 			T_StatGroup group;
-			group.n = eis.mImpedances.size();
+			group.n = static_cast<int>(eis.mImpedances.size());
 			group.mean = eis.vAverages[i];
 			group.sd = eis.vStddev[i];
 			eisStats[eis.vFrequencies[i]].push_back(group);
@@ -350,7 +352,8 @@ T_DeviceData Core::BatchAverages(const std::vector<std::string> sIds)
 		eisBatchAvrg.insert({ freq, stats });
 		eisTable.AddRow({ freq, SU::RoundToStr(stats.mean), SU::RoundToStr(stats.stddev) });
 	}
-	eisTable.Print(TERM_GREEN);
+	std::cout << "\nAverage impedances" << std::endl;
+	eisTable.Print(TERM_BOLDGREEN);
 
 
 	// CV
@@ -358,13 +361,14 @@ T_DeviceData Core::BatchAverages(const std::vector<std::string> sIds)
 	std::vector<T_StatGroup> cvNormStats;
 	for (const auto& device : devices)
 	{
-		if (device.tCv.has_value())
+		if (!device.tCv.has_value())
 		{
+			std::cout << device.sDeviceId << " is missing CV data" << std::endl;
 			continue;
 		}
 		const T_CvData& cv = device.tCv.value();
 		T_StatGroup group;
-		group.n = cv.mElectrodes.size();
+		group.n = static_cast<int>(cv.mElectrodes.size());
 		group.mean = cv.tCsc.mean;
 		group.sd = cv.tCsc.stddev;
 		cvStats.push_back(group);
@@ -377,7 +381,8 @@ T_DeviceData Core::BatchAverages(const std::vector<std::string> sIds)
 	PrintTable cvTable({ " ", "Average", "Stddev" });
 	cvTable.AddRow({ "mC", std::to_string(cvBatchStats.mean), std::to_string(cvBatchStats.stddev) });
 	cvTable.AddRow({ "mC/cm^2", std::to_string(cvNormBatchStats.mean), std::to_string(cvNormBatchStats.stddev) });
-	cvTable.Print(TERM_BLUE);
+	std::cout << "\nAverage CSCs" << std::endl;
+	cvTable.Print(TERM_BOLDBLUE);
 
 	
 	// CIL
@@ -385,13 +390,14 @@ T_DeviceData Core::BatchAverages(const std::vector<std::string> sIds)
 	std::map<int, std::vector<T_StatGroup>> cilNormStats;
 	for (const auto& device : devices)
 	{
-		if (device.tCv.has_value())
+		if (!device.tCil.has_value())
 		{
+			std::cout << device.sDeviceId << " is missing EIS data" << std::endl;
 			continue;
 		}
 		const T_CilData& cil = device.tCil.value();
 		T_StatGroup group;
-		group.n = cil.mCilVals.size();
+		group.n = static_cast<int>(cil.mCilVals.size());
 		for (int i = 0; i < cil.vPulseWidths.size(); ++i)
 		{
 			group.mean = cil.vCilStats[i].mean;
@@ -409,9 +415,11 @@ T_DeviceData Core::BatchAverages(const std::vector<std::string> sIds)
 	{
 		T_Stats stats = PooledStddev(groupList);
 		cilBatchAvrg.insert({ pulseWidth, stats });
-		T_Stats statsNorm = PooledStddev(groupList);
+		T_Stats statsNorm = PooledStddev(cilNormStats.at(pulseWidth));
 		cilNormBatchAvrg.insert({ pulseWidth, statsNorm});
 		cilTable.AddRow({ std::to_string(pulseWidth), std::to_string(stats.mean), std::to_string(stats.stddev), std::to_string(statsNorm.mean), std::to_string(stats.stddev) });
 	}
-	cilTable.Print(TERM_BOLDYELLOW);
+	std::cout << "\nAverage CILs" << std::endl;
+	cilTable.Print(TERM_YELLOW);
+	return true;
 }

@@ -27,7 +27,7 @@ Options::Options()
 	AddOpt({ "cil-plot-avrg", "Plot per-device CILs", E_OptType::Int, 1 });
 	AddOpt({ "cil-plot-each", "Plot per-electrode CILs", E_OptType::Int, 0 });
 
-	//AddOpt({ "arch-recalculate", "Ignore archive entries; recalculate & tabulate values from raw data files", E_OptType::Int, 0 });
+	AddOpt({ "arch-recalc", "Ignore archive entries; recalculate & tabulate values from raw data files", E_OptType::Int, 0 });
 	AddOpt({ "arch-overwrite", "Replace existing archive entries", E_OptType::Int, 0 });
 }
 
