@@ -65,9 +65,6 @@ E_CmdErr Core::Run(const std::string sDeviceId, E_DataTypes eModes)
 
 	std::cout << "\nReading device " << sDeviceId << "\n-------------------" << std::endl;
 	Ingester ingest(devicePath);
-
-
-	// todo: pull from archive
 	T_DeviceData data = m_Archive.GetDevice(sDeviceId);
 	bool isInArchive = data.sDeviceId != "";
 	if (isInArchive)
@@ -79,12 +76,6 @@ E_CmdErr Core::Run(const std::string sDeviceId, E_DataTypes eModes)
 		data.sDeviceId = sDeviceId;
 		data.tInfo = ingest.GetDeviceInfo();
 	}
-
-	// compare
-	// See if the archived data is missing components
-	// run the missing components
-	// add the data to the archive
-
 
 	if (eModes & E_DataTypes::kEis)
 	{
@@ -425,8 +416,9 @@ std::array<T_ErrorPlotF, 2> Core::BuildEisPlot(const T_EisData& tData)
 
 	T_ErrorPlotF PointsZ;
 	T_ErrorPlotF PointsPhase;
-	PointsZ.x.insert(PointsZ.x.end(), tData.mRaw.begin()->second.vFrequencies.begin(), tData.mRaw.begin()->second.vFrequencies.end());
-	PointsPhase.x.insert(PointsPhase.x.end(), tData.mRaw.begin()->second.vFrequencies.begin(), tData.mRaw.begin()->second.vFrequencies.end());
+	auto& freqs = tData.mRaw.begin()->second.vFrequencies;
+	PointsZ.x.insert(PointsZ.x.begin(), freqs.begin(), freqs.end());
+	PointsPhase.x.insert(PointsPhase.x.begin(), tData.mRaw.begin()->second.vFrequencies.begin(), tData.mRaw.begin()->second.vFrequencies.end());
 
 	for (int i = 0; i < tData.mRaw.begin()->second.vImpedances.size(); ++i)
 	{
@@ -555,6 +547,20 @@ T_ErrorPlotF Core::BuildCvPlot(const T_CvData& tData)
 	output.err.push_back(output.err.front());
 	std::cout << "Done" << std::endl;
 	return output;
+}
+
+T_ErrorPlotF Core::BuildCilPlot(const T_CilData& tData)
+{
+	T_ErrorPlotF out;
+
+	out.x.resize(tData.vPulseWidths.size());
+	std::transform(tData.vPulseWidths.begin(), tData.vPulseWidths.end(), out.x.begin(), [](int nMillis) { return static_cast<float>(nMillis);});
+	for (int i = 0; i < tData.vPulseWidths.size(); ++i)
+	{
+		out.y.push_back(tData.vCilStats[i].mean);
+		out.err.push_back(tData.vCilStats[i].stddev);
+	}
+	return out;
 }
 
 bool Core::LoadGrapher()

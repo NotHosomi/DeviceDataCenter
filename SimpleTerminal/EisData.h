@@ -20,5 +20,5 @@ struct T_EisData
 	std::map<std::string, std::vector<double>> mImpedances;
 
 	std::map<std::string, T_EisRawData> mRaw;
-	NLOHMANN_DEFINE_TYPE_INTRUSIVE(T_EisData, vFrequencies, vAverages, vStddev, mImpedances);
+	NLOHMANN_DEFINE_TYPE_INTRUSIVE(T_EisData, vFrequencies, vAverages, vStddev, mImpedances, mRaw);
 };
