@@ -14,7 +14,7 @@ struct T_EisRawData
 
 struct T_EisData
 {
-	std::vector<std::string> vFrequencies;
+	std::vector<std::string> vFrequencies; // todo: overhaul this to just look up the raw every time
 	std::vector<double> vAverages; 
 	std::vector<double> vStddev;
 	std::map<std::string, std::vector<double>> mImpedances;

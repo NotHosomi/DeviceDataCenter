@@ -20,7 +20,6 @@ Commands::Commands(Core* pCore) :
 	m_mCommands.emplace("exec", std::bind_front(&Commands::Exec, this));
 	m_mCommands.emplace("compare", std::bind_front(&Commands::CompareDevices, this));
 	m_mCommands.emplace("average", std::bind_front(&Commands::AverageDevices, this));
-	m_mCommands.emplace("set", std::bind_front(&Commands::SetDataDirectory, this));
 	m_mCommands.emplace("help", std::bind_front(&Commands::Help, this));
 	m_mCommands.emplace("quit", std::bind_front(&Commands::Quit, this));
 
@@ -129,19 +128,6 @@ E_CmdErr Commands::AverageDevices(const std::string& vArgs)
 	return E_CmdErr::None;
 }
 
-E_CmdErr Commands::SetDataDirectory(const std::string& vArgs)
-{
-	if (!std::filesystem::exists(vArgs))
-	{
-		std::cout << "Could not find the specified directory. Aborting" << std::endl;
-		return E_CmdErr::BadArgs;
-	}
-
-	m_pCore->UserConfig().dataDirectory = vArgs;
-	std::cout << "data directory set to \"" << vArgs << "\"" << std::endl;
-	return E_CmdErr::None;
-}
-
 E_CmdErr Commands::GetOpt(const std::string& vArgs)
 {
 	const T_Opt& opt = Options::Get().GetOpt(vArgs);
@@ -193,7 +179,9 @@ E_CmdErr Commands::SetOpt(const std::string& vArgs)
 	catch (std::invalid_argument e)
 	{
 		std::cout << "Invalid option value" << std::endl;
+		return E_CmdErr::BadArgs;
 	}
+	std::cout << "Done" << std::endl;
 	return E_CmdErr::None;
 }
 
@@ -269,7 +257,7 @@ E_CmdErr Commands::Help(const std::string& vArgs)
 	std::cout << " - Dev <Eis/Cv/Cil/All> <deviceId>\t\t\tParses data for the specified device" << std::endl;
 	std::cout << " - Multi <Eis/Cv/Cil/All> <deviceId> <deviceId> ...\tParses data for each of the devices specified" << std::endl;
 	std::cout << " - Plot <Eis/Cv/Cil/All> <deviceId>\t\t\tPlots data for the specified device" << std::endl;
-	std::cout << " - Compare <Eis/Cv/Cil/All> <deviceId> <deviceId> ...\tPlots multiple devices onto shared graph" << std::endl;
+	//std::cout << " - Compare <Eis/Cv/Cil/All> <deviceId> <deviceId> ...\tPlots multiple devices onto shared graph" << std::endl;
 	std::cout << " - Average <Eis/Cv/Cil/All> <deviceId> <deviceId> ...\tParses EIS, CV, and CIL for each of the devices specified" << std::endl;
 	std::cout << " - GetOpt <optionName>\t\t\t\t\tPrints the value of the specified option" << std::endl;
 	std::cout << " - SetOpt <optionName> <value>\t\t\t\tSets the value of the specified option" << std::endl;

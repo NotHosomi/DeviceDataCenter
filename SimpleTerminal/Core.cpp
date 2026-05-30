@@ -14,37 +14,25 @@
 
 Core::Core()
 {
-	std::cout << "Loading user config..." << std::flush;
-	if (!LoadJson<T_UserConfig>("./UserConfig.json", m_tUserConfig))
-	{
-		std::cout << "Failed -- Creating default..." << std::flush;
-		SaveJson("./UserConfig.json", m_tUserConfig);
-	}
-	std::cout << "Done" << std::endl;
-
 	// Validate data dir
-	m_DataPath = m_tUserConfig.dataDirectory;
-	if (!std::filesystem::exists(m_DataPath))
+	std::string dataPath = Options::Get().GetOpt<std::string>("ingest-dir");
+	if (!std::filesystem::exists(dataPath))
 	{
 		do
 		{
-			if (m_DataPath != "")
+			if (dataPath != "")
 			{
-				std::cout << TERM_BOLDRED << "Data path \"" + m_DataPath.string() + "\" does not exist" << TERM_RESET << std::endl;
+				std::cout << TERM_BOLDRED << "Data path \"" + dataPath + "\" does not exist" << TERM_RESET << std::endl;
 			}
-			std::cout << "Input data path: ";
-			std::cin >> m_DataPath;
+			std::cout << "Please specify data directory: ";
+			std::cin >> dataPath;
 			std::cin.clear();
-		} while (!std::filesystem::exists(m_DataPath));
+		} while (!std::filesystem::exists(dataPath));
+		Options::Get().SetOpt("ingest-dir", dataPath);
 	}
 	else
 	{
-		std::cout << "Data directory: " << std::filesystem::path(m_DataPath) << std::endl;
-	}
-	std::string plotDir = m_tUserConfig.plotDirectory;
-	if (plotDir == "")
-	{
-		plotDir = "./Plots";
+		std::cout << "Data directory: " << std::filesystem::path(dataPath) << std::endl;
 	}
 }
 
@@ -55,7 +43,7 @@ E_CmdErr Core::Run(const std::string sDeviceId, E_DataTypes eModes)
 		return E_CmdErr::BadOptions;
 	}
 
-	std::filesystem::path devicePath = UserConfig().dataDirectory + "/" + sDeviceId;
+	std::filesystem::path devicePath = Options::Get().GetOpt<std::string>("ingest-dir") + "/" + sDeviceId;
 	if (!std::filesystem::exists(devicePath))
 	{
 		std::cout << "Could not find " << sDeviceId << std::endl;
@@ -79,15 +67,15 @@ E_CmdErr Core::Run(const std::string sDeviceId, E_DataTypes eModes)
 
 	if (eModes & E_DataTypes::kEis)
 	{
-		Eis(data, ingest, m_tUserConfig.eis);
+		Eis(data, ingest);
 	}
 	if (eModes & E_DataTypes::kCv)
 	{
-		Cv(data, ingest, m_tUserConfig.cv);
+		Cv(data, ingest);
 	}
 	if (eModes & E_DataTypes::kCil)
 	{
-		Cil(data, ingest, m_tUserConfig.cil);
+		Cil(data, ingest);
 	}
 
 	if (!isInArchive || Options::Get().GetOpt<bool>("arch-overwrite"))
@@ -148,17 +136,29 @@ E_CmdErr Core::Plot(const std::string sDeviceId, E_DataTypes eModes)
 	return E_CmdErr::None;
 }
 
-T_EisData Core::Eis(T_DeviceData& tDeviceData, const Ingester& ingest, const T_EisConfig& tConfig)
+T_EisData Core::Eis(T_DeviceData& tDeviceData, const Ingester& ingest)
 {
+	std::vector<std::string> keyVals = SU::Delimit(Options::Get().GetOpt<std::string>("eis-keyvals"), ",");
+	for (auto keyval : keyVals)
+	{
+		try
+		{
+			static_cast<void>(stof(keyval));
+		}
+		catch (...)
+		{
+			std::cout << "Could not parse opt eis-keyvals. Aborting" << std::endl;
+			return {};
+		}
+	}
+
 	// EIS
 	if (!tDeviceData.tEis.has_value() || Options::Get().GetOpt<bool>("arch-overwrite") || Options::Get().GetOpt<bool>("arch-recalc"))
 	{
-		std::cout << "\nFetching EIS values..." << std::flush;
-		T_EisData newdata = ingest.ParseEis(tConfig.keyVals);
+		T_EisData newdata = ingest.ParseEis(keyVals);
 		if (newdata.mImpedances.size() != 0)
 		{
 			tDeviceData.tEis = newdata;
-			std::cout << "Done" << std::endl;
 		}
 	}
 
@@ -171,17 +171,14 @@ T_EisData Core::Eis(T_DeviceData& tDeviceData, const Ingester& ingest, const T_E
 		return {};
 	}
 	// EIS Table
-	PrintEisVals(tDeviceData.tEis.value(), tConfig);
+	PrintEisVals(tDeviceData.tEis.value(), keyVals);
 	PlotEis(tDeviceData, false);
 
 	return tDeviceData.tEis.value();
 }
 
-T_CvData Core::Cv(T_DeviceData& tDeviceData, const Ingester& ingest, const T_CvConfig& tConfig)
+T_CvData Core::Cv(T_DeviceData& tDeviceData, const Ingester& ingest)
 {
-	if (!tConfig.calcCsc) { return {}; }
-
-
 	if (!tDeviceData.tCv.has_value() || Options::Get().GetOpt<bool>("arch-overwrite") || Options::Get().GetOpt<bool>("arch-recalc"))
 	{
 		T_CvData newdata = ingest.CalculateCscVals();
@@ -206,13 +203,8 @@ T_CvData Core::Cv(T_DeviceData& tDeviceData, const Ingester& ingest, const T_CvC
 	return tDeviceData.tCv.value();
 }
 
-T_CilData Core::Cil(T_DeviceData& tDeviceData, const Ingester& ingest, const T_CilConfig& tConfig)
+T_CilData Core::Cil(T_DeviceData& tDeviceData, const Ingester& ingest)
 {
-	if (!tConfig.calcCil)
-	{
-		return {};
-	}
-
 	if (!tDeviceData.tCil.has_value() || Options::Get().GetOpt<bool>("arch-overwrite") || Options::Get().GetOpt<bool>("arch-recalc"))
 	{
 		T_CilData newdata = ingest.CalculateCilVals();
@@ -245,34 +237,54 @@ T_CilData Core::Cil(T_DeviceData& tDeviceData, const Ingester& ingest, const T_C
 	return tCilData;
 }
 
-T_UserConfig& Core::UserConfig()
-{
-	return m_tUserConfig;
-}
-
-void Core::PrintEisVals(const T_EisData& tEisData, const T_EisConfig& tConfig)
+void Core::PrintEisVals(const T_EisData& tEisData, const std::vector<std::string>& vKeyVals)
 {
 	std::vector<std::string> headers;
 	headers.push_back("Electrode");
-	for (auto keyval : tConfig.keyVals)
-	{
+	for (auto keyval : vKeyVals)
+	{ 
 		headers.push_back(keyval + " Hz");
 	}
 	PrintTable EisTable(headers);
 	std::vector<std::string> eisExclusionList;
 	std::vector<std::string> newRow;
 	std::string colour;
-	for (const auto& iter : tEisData.mImpedances)
+	for (const auto& [electrode, impedances] : tEisData.mImpedances)
 	{
 		colour = TERM_GREEN;
-		if (std::any_of(iter.second.begin(), iter.second.end(), [tConfig](double val) { return val > tConfig.maxValidImpedance; }))
+		if (std::any_of(impedances.begin(), impedances.end(), [](double val)
+			{
+				return val > Options::Get().GetOpt<int>("eis-threshold-upper-yellow") ||
+					val < Options::Get().GetOpt<int>("eis-threshold-lower-yellow");
+			}))
+		{
+			colour = TERM_YELLOW;
+		}
+		if (std::any_of(impedances.begin(), impedances.end(), [](double val)
+			{
+				return val > Options::Get().GetOpt<int>("eis-threshold-upper-red") ||
+					val < Options::Get().GetOpt<int>("eis-threshold-lower-red");
+			}))
 		{
 			colour = TERM_RED;
+			eisExclusionList.push_back(electrode);
 		}
-		EisTable.AddRow(iter.first, iter.second, colour);
+		EisTable.AddRow(electrode, impedances, colour);
 	}
 	colour = TERM_GREEN;
-	if (std::any_of(tEisData.vAverages.begin(), tEisData.vAverages.end(), [tConfig](double val) { return val > tConfig.maxValidImpedance; }))
+	if (std::any_of(tEisData.vAverages.begin(), tEisData.vAverages.end(), [](double val)
+		{
+			return val > Options::Get().GetOpt<int>("eis-threshold-upper-yellow") ||
+				val < Options::Get().GetOpt<int>("eis-threshold-lower-yellow");
+		}))
+	{
+		colour = TERM_YELLOW;
+	}
+	if (std::any_of(tEisData.vAverages.begin(), tEisData.vAverages.end(), [](double val)
+		{
+			return val > Options::Get().GetOpt<int>("eis-threshold-upper-red") ||
+				val < Options::Get().GetOpt<int>("eis-threshold-lower-red");
+		}))
 	{
 		colour = TERM_RED;
 	}
@@ -405,7 +417,7 @@ std::array<T_ErrorPlotF, 2> Core::BuildEisPlot(const T_EisData& tData)
 	{
 		for (const auto& impedence : data.vImpedances)
 		{
-			if (impedence > Options::Get().GetOpt<float>("eis-impedence-limit"));
+			if (impedence > Options::Get().GetOpt<float>("eis-impedence-limit"))
 			{
 				excludeElectrodes.push_back(electrode);
 				break;
@@ -421,9 +433,11 @@ std::array<T_ErrorPlotF, 2> Core::BuildEisPlot(const T_EisData& tData)
 
 	T_ErrorPlotF PointsZ;
 	T_ErrorPlotF PointsPhase;
-	auto& freqs = tData.mRaw.begin()->second.vFrequencies;
-	PointsZ.x.insert(PointsZ.x.begin(), freqs.begin(), freqs.end());
-	PointsPhase.x.insert(PointsPhase.x.begin(), tData.mRaw.begin()->second.vFrequencies.begin(), tData.mRaw.begin()->second.vFrequencies.end());
+	for (const auto& freq : tData.mRaw.begin()->second.vFrequencies)
+	{ 
+		PointsZ.x.push_back(static_cast<float>(freq));
+		PointsPhase.x.push_back(static_cast<float>(freq));
+	}
 
 	for (int i = 0; i < tData.mRaw.begin()->second.vImpedances.size(); ++i)
 	{
@@ -440,11 +454,11 @@ std::array<T_ErrorPlotF, 2> Core::BuildEisPlot(const T_EisData& tData)
 			rowPhaseVals.push_back(data.vPhases[i]);
 		}
 		T_Stats rowZStats = stddev(rowZVals);
-		PointsZ.y.push_back(rowZStats.mean);
-		PointsZ.err.push_back(rowZStats.stddev);
+		PointsZ.y.push_back(static_cast<float>(rowZStats.mean));
+		PointsZ.err.push_back(static_cast<float>(rowZStats.stddev));
 		T_Stats rowPhaseStats = stddev(rowPhaseVals);
-		PointsPhase.y.push_back(rowPhaseStats.mean);
-		PointsPhase.err.push_back(rowPhaseStats.stddev);
+		PointsPhase.y.push_back(static_cast<float>(rowPhaseStats.mean));
+		PointsPhase.err.push_back(static_cast<float>(rowPhaseStats.stddev));
 	}
 	std::cout << " Done" << std::endl;
 	return { PointsZ, PointsPhase };
@@ -562,8 +576,8 @@ T_ErrorPlotF Core::BuildCilPlot(const T_CilData& tData)
 	std::transform(tData.vPulseWidths.begin(), tData.vPulseWidths.end(), out.x.begin(), [](int nMillis) { return static_cast<float>(nMillis);});
 	for (int i = 0; i < tData.vPulseWidths.size(); ++i)
 	{
-		out.y.push_back(tData.vCilStats[i].mean);
-		out.err.push_back(tData.vCilStats[i].stddev);
+		out.y.push_back(static_cast<float>(tData.vCilStats[i].mean));
+		out.err.push_back(static_cast<float>(tData.vCilStats[i].stddev));
 	}
 	return out;
 }

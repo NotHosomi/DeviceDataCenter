@@ -9,7 +9,6 @@
 #include "Options.h"
 
 // Feature wishlist
-// - CIL plotting (test this)
 // - batch tracking
 // - UI interfacing with Core
 
@@ -25,6 +24,7 @@ int main(int argc, char* argv[])
 	std::string rawInput;
 	for (;;)
 	{
+		std::cin.clear();
 		std::cout << TERM_GREEN << "\n>> " << TERM_RESET << std::flush;
 		std::getline(std::cin, rawInput);
 		SU::ToLower(rawInput);

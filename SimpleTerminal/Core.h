@@ -1,6 +1,5 @@
 #pragma once
 #include <memory>
-#include "UserConfig.h"
 #include "GrapherGeneric.h"
 #include "stddev.h"
 #include "Archive.h"
@@ -41,14 +40,13 @@ public:
 	E_CmdErr Plot(const std::string sDeviceId, E_DataTypes eModes);
 	bool BatchAverages(const std::vector<std::string> sIds);
 
-	T_UserConfig& UserConfig();
 
 private:
-	T_EisData Eis(T_DeviceData& tDeviceData, const Ingester& ingest, const T_EisConfig& tUserConfig);
-	T_CvData Cv(T_DeviceData& tDeviceData, const Ingester& ingest, const T_CvConfig& tUserConfig);
-	T_CilData Cil(T_DeviceData& tDeviceData, const Ingester& ingest, const T_CilConfig& tUserConfig);
+	T_EisData Eis(T_DeviceData& tDeviceData, const Ingester& ingest);
+	T_CvData Cv(T_DeviceData& tDeviceData, const Ingester& ingest);
+	T_CilData Cil(T_DeviceData& tDeviceData, const Ingester& ingest);
 
-	void PrintEisVals(const T_EisData& tEisData, const T_EisConfig& tConfig);
+	void PrintEisVals(const T_EisData& tEisData, const std::vector<std::string>& vKeyVals);
 	void PrintCscVals(const T_CvData& tCvData);
 	void PrintCilVals(std::vector<int> vPulseWidths, std::map<int, std::vector<float>> mVals, std::vector<T_Stats> vStats);
 
@@ -62,9 +60,7 @@ private:
 
 	bool LoadGrapher();
 
-	std::filesystem::path m_DataPath;
 	std::unique_ptr<GrapherGeneric> m_pGrapher;
 	Archive m_Archive;
-	T_UserConfig m_tUserConfig;
 };
 

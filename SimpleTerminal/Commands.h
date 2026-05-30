@@ -29,7 +29,6 @@ private:
 	E_CmdErr Plot(const std::string& sArgs);
 	E_CmdErr CompareDevices(const std::string& sArgs);
 	E_CmdErr AverageDevices(const std::string& sArgs);
-	E_CmdErr SetDataDirectory(const std::string& sArgs);
 	E_CmdErr GetOpt(const std::string& sArgs);
 	E_CmdErr SetOpt(const std::string& sArgs);
 	E_CmdErr ListOpts(const std::string& sArgs);

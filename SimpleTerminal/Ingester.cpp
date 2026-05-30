@@ -158,13 +158,14 @@ double Ingester::hysteresisArea(const std::vector<double>& x, const std::vector<
 
 T_EisData Ingester::ParseEis(const std::vector<std::string>& vKeyVals) const
 {
+	std::cout << "\nReading EIS file..." << std::flush;
 	T_EisData out;
 	out.vFrequencies = vKeyVals;
 
 	std::vector<CsvFile> csvList = readFiles(m_vEisPaths);
 	if (csvList.size() == 0)
 	{
-		std::cout << "No EIS files to read" << std::endl;
+		std::cout << "Failed - No EIS files" << std::endl;
 		return {};
 	}
 

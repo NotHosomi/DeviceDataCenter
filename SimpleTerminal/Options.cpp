@@ -4,20 +4,22 @@
 
 Options::Options()
 {
-	std::cout << "Loading options..." << std::flush;
-	if (LoadOpts())
+	if (!LoadOpts())
 	{
-		std::cout << "Done" << std::endl;
-	}
-	else
-	{
-		std::cout << "Failed. Using defaults" << std::endl;
+		std::cout << "Using defaults" << std::endl;
 		m_mOptions.clear();
 	}
 
 	AddOpt({ "ingest-verbosity", "The level of information printed by the ingester <0/1/2>", E_OptType::Int, 0 });
+	AddOpt({ "ingest-dir", "The directory containing your device folders", E_OptType::String, ""});
 
 	AddOpt({ "eis-impedence-limit", "The threshold at which electrodes are flagged as non-functional", E_OptType::Float, 25000.0 });
+
+	AddOpt({ "eis-keyvals", "The frequencies rendered in the EIS table", E_OptType::String, "100,1000,1995.3" });
+	AddOpt({ "eis-threshold-upper-red", "Impedence values above this threshold will be excluded as a non-functional electrode", E_OptType::Int, 100000});
+	AddOpt({ "eis-threshold-upper-yellow", "Impedence values above this threshold might be non-functional", E_OptType::Int, 20000});
+	AddOpt({ "eis-threshold-lower-red", "Impedence values below this threshold will be excluded as being shorted", E_OptType::Int, 100000 });
+	AddOpt({ "eis-threshold-lower-yellow", "Impedence values below this threshold might be shorted", E_OptType::Int, 20000 });
 
 	AddOpt({ "eis-plot-avrg", "Plot per-device EIS graph", E_OptType::Int, 1 });
 	AddOpt({ "eis-plot-each", "Plot per-electrode EIS graph", E_OptType::Int, 0 });
@@ -44,7 +46,6 @@ Options::Options()
 	AddOpt({ "plotter-eis-ymax", "in ohms", E_OptType::Float, 1000000.0 });
 	AddOpt({ "plotter-eis-ymin", "in ohms", E_OptType::Float, 1000.0 });
 	AddOpt({ "plotter-cv-ylim", "in microamps", E_OptType::Float, 2.0 });
-
 }
 
 Options& Options::Get()
@@ -92,12 +93,13 @@ bool Options::SaveOpts(const std::string& sFilename)
 
 bool Options::LoadOpts(const std::string& sFilename)
 {
+	std::cout << "Loading options \"" + sFilename + ".json\"..." << std::flush;
 	if (!Deserialise("./options/" + sFilename + ".json"))
 	{
-		std::cout << "Failed to load options" << std::endl;
+		std::cout << "Failed" << std::endl;
 		return false;
 	}
-	std::cout << "Loaded options" << std::endl;
+	std::cout << "Done" << std::endl;
 	return true;
 }
 
