@@ -271,12 +271,12 @@ E_CmdErr Commands::Help(const std::string& vArgs)
 	std::cout << " - Plot <Eis/Cv/Cil/All> <deviceId>\t\t\tPlots data for the specified device" << std::endl;
 	std::cout << " - Compare <Eis/Cv/Cil/All> <deviceId> <deviceId> ...\tPlots multiple devices onto shared graph" << std::endl;
 	std::cout << " - Average <Eis/Cv/Cil/All> <deviceId> <deviceId> ...\tParses EIS, CV, and CIL for each of the devices specified" << std::endl;
-	std::cout << " - GetOpt <optionName>\t\tPrints the value of the specified option" << std::endl;
-	std::cout << " - SetOpt <optionName> <value>\t\tSets the value of the specified option" << std::endl;
+	std::cout << " - GetOpt <optionName>\t\t\t\t\tPrints the value of the specified option" << std::endl;
+	std::cout << " - SetOpt <optionName> <value>\t\t\t\tSets the value of the specified option" << std::endl;
 	std::cout << " - ListOpts\t\t\t\t\t\tLists all settings and their values" << std::endl;
-	std::cout << " - SaveOpts <filename>\t\t\t\t\t\tSaves the current options. Filename" << std::endl;
+	std::cout << " - SaveOpts <filename>\t\t\t\t\tSaves the current options. Filename" << std::endl;
 	std::cout << " - LoadOpts\t\t\t\t\t\tSaves your current options for next time" << std::endl;
-	std::cout << " - Exec <filename>\t\t\t\t\t\t\tRuns the commands contained in the specified file" << std::endl;
+	std::cout << " - Exec <filename>\t\t\t\t\tRuns the commands contained in the specified file" << std::endl;
 	std::cout << " - Help\t\t\t\t\t\t\tLists available commands" << std::endl;
 	std::cout << " - Quit\t\t\t\t\t\t\tterminates the program" << std::endl;
 
